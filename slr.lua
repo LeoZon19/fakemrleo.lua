@@ -2,8 +2,9 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 
--- UI Setup
+-- UI
 local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "fakemrleo_SLR_UI"
 
@@ -29,6 +30,7 @@ layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 title.LayoutOrder = 0
 
+-- Button creator
 local function createButton(text, callback)
 	local button = Instance.new("TextButton")
 	button.Size = UDim2.new(0, 360, 0, 40)
@@ -42,7 +44,7 @@ local function createButton(text, callback)
 	return button
 end
 
--- Walkspeed
+-- Walkspeed Control
 local walkspeed = 20
 local wsLabel = Instance.new("TextLabel", frame)
 wsLabel.Size = UDim2.new(0, 360, 0, 20)
@@ -70,7 +72,7 @@ createButton("Decrease Walkspeed", function()
 	end
 end)
 
--- Fly (PC only)
+-- Fly (Hold F)
 createButton("Fly (Hold F)", function()
 	local flying = false
 	UIS.InputBegan:Connect(function(input)
@@ -78,7 +80,7 @@ createButton("Fly (Hold F)", function()
 			flying = true
 			while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") do
 				LocalPlayer.Character.Humanoid.Sit = true
-				LocalPlayer.Character.Head.Velocity = workspace.CurrentCamera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
+				LocalPlayer.Character.Head.Velocity = Camera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
 				task.wait()
 			end
 		end
@@ -93,7 +95,7 @@ createButton("Fly (Hold F)", function()
 	end)
 end)
 
--- Enlarge Heads
+-- Enlarge Heads (Visual only)
 createButton("Enlarge Heads", function()
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
@@ -157,62 +159,35 @@ createButton("Anti-Ragdoll", function()
 	end)
 end)
 
--- === Inserted Aimbot Core Logic from first script, without UI buttons ===
-
-local function setupAimbot(toggleKey)
-	local aimbotEnabled = false
-
-	local function getClosestPlayer()
-		local closest, dist = nil, math.huge
+-- SAFE Aimbot (Camera rotation)
+createButton("Enable Aimbot", function()
+	_G.Aimbot = true
+	local function getClosestTarget()
+		local closest, shortest = nil, math.huge
 		for _, p in pairs(Players:GetPlayers()) do
 			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-				local head = p.Character.Head.Position
-				local screenPoint, onScreen = workspace.CurrentCamera:WorldToViewportPoint(head)
-				if onScreen then
-					local diff = (Vector2.new(screenPoint.X, screenPoint.Y) - UIS:GetMouseLocation()).Magnitude
-					if diff < dist then
-						dist = diff
-						closest = p
-					end
+				local screenPoint, visible = Camera:WorldToViewportPoint(p.Character.Head.Position)
+				local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - UIS:GetMouseLocation()).Magnitude
+				if distance < shortest and visible then
+					closest = p
+					shortest = distance
 				end
 			end
 		end
 		return closest
 	end
 
-	local mt = getrawmetatable(game)
-	setreadonly(mt, false)
-	local old = mt.__namecall
-	mt.__namecall = newcclosure(function(self, ...)
-		local args = {...}
-		local method = getnamecallmethod()
-		if tostring(self) == "FireServer" and method == "FireServer" and typeof(args[1]) == "CFrame" and aimbotEnabled then
-			local target = getClosestPlayer()
-			if target then
-				args[1] = CFrame.new(target.Character.Head.Position)
-				return old(self, unpack(args))
+	RunService.RenderStepped:Connect(function()
+		if _G.Aimbot then
+			local target = getClosestTarget()
+			if target and target.Character and target.Character:FindFirstChild("Head") then
+				Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
 			end
 		end
-		return old(self, ...)
 	end)
+end)
 
-	-- Toggle aimbot with the key
-	UIS.InputBegan:Connect(function(input, gpe)
-		if input.KeyCode == toggleKey and not gpe then
-			aimbotEnabled = not aimbotEnabled
-			print("Aimbot:", aimbotEnabled and "ON" or "OFF")
-		end
-	end)
-end
-
--- Setup PC Aimbot toggle with RightShift
-setupAimbot(Enum.KeyCode.RightShift)
-
--- Setup Mobile Aimbot toggle with Unknown key (or you can change this as needed)
-setupAimbot(Enum.KeyCode.Unknown)
-
-
--- RightShift to toggle UI visibility
+-- Toggle UI with RightShift
 UIS.InputBegan:Connect(function(input, gpe)
 	if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
 		gui.Enabled = not gui.Enabled
