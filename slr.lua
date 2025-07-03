@@ -2,9 +2,14 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 
+-- Safe UI Reset
+pcall(function() game.CoreGui:FindFirstChild("fakemrleo_SLR_UI"):Destroy() end)
+
 -- UI
-local gui = Instance.new("ScreenGui", game.CoreGui)
+local gui = Instance.new("ScreenGui")
 gui.Name = "fakemrleo_SLR_UI"
+gui.ResetOnSpawn = false
+gui.Parent = game:GetService("CoreGui")
 
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0, 400, 0, 500)
@@ -71,29 +76,32 @@ createButton("Decrease Walkspeed", function()
 end)
 
 -- Fly (Hold F)
+local flying = false
 createButton("Fly (Hold F)", function()
-	local flying = false
-	UIS.InputBegan:Connect(function(input)
-		if input.KeyCode == Enum.KeyCode.F then
-			flying = true
-			while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") do
-				LocalPlayer.Character.Humanoid.Sit = true
-				LocalPlayer.Character.Head.Velocity = workspace.CurrentCamera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
-				task.wait()
+	if not _G.FlyHooked then
+		_G.FlyHooked = true
+		UIS.InputBegan:Connect(function(input)
+			if input.KeyCode == Enum.KeyCode.F then
+				flying = true
+				while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") do
+					LocalPlayer.Character.Humanoid.Sit = true
+					LocalPlayer.Character.Head.Velocity = workspace.CurrentCamera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
+					task.wait()
+				end
 			end
-		end
-	end)
-	UIS.InputEnded:Connect(function(input)
-		if input.KeyCode == Enum.KeyCode.F then
-			flying = false
-			if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-				LocalPlayer.Character.Humanoid.Sit = false
+		end)
+		UIS.InputEnded:Connect(function(input)
+			if input.KeyCode == Enum.KeyCode.F then
+				flying = false
+				if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+					LocalPlayer.Character.Humanoid.Sit = false
+				end
 			end
-		end
-	end)
+		end)
+	end
 end)
 
--- Enlarge Heads
+-- Enlarge Heads (Visual)
 createButton("Enlarge Heads", function()
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
@@ -120,11 +128,11 @@ createButton("Highlight Players", function()
 end)
 
 -- Anti-Ragdoll
-createButton("Toggle Anti-Ragdoll", function()
-	_G.AntiRagdoll = not _G.AntiRagdoll
-	if _G.AntiRagdoll then
+createButton("Anti-Ragdoll", function()
+	if not _G.AntiRagdollRunning then
+		_G.AntiRagdollRunning = true
 		task.spawn(function()
-			while _G.AntiRagdoll do
+			while _G.AntiRagdollRunning do
 				local char = LocalPlayer.Character
 				if char then
 					for _, v in pairs(char:GetDescendants()) do
@@ -136,6 +144,30 @@ createButton("Toggle Anti-Ragdoll", function()
 				task.wait(0.1)
 			end
 		end)
+	end
+end)
+
+-- Show Usernames
+createButton("Show Usernames", function()
+	for _, p in pairs(Players:GetPlayers()) do
+		if p.Character and not p.Character:FindFirstChild("UsernameTag") then
+			local tag = Instance.new("BillboardGui")
+			tag.Name = "UsernameTag"
+			tag.Adornee = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("UpperTorso")
+			tag.Size = UDim2.new(0, 100, 0, 40)
+			tag.StudsOffset = Vector3.new(0, 2, 0)
+			tag.AlwaysOnTop = true
+			tag.Parent = p.Character
+
+			local label = Instance.new("TextLabel", tag)
+			label.Size = UDim2.new(1, 0, 1, 0)
+			label.BackgroundTransparency = 1
+			label.TextColor3 = Color3.new(1, 1, 1)
+			label.TextStrokeTransparency = 0
+			label.Font = Enum.Font.GothamBold
+			label.TextSize = 14
+			label.Text = p.Name
+		end
 	end
 end)
 
