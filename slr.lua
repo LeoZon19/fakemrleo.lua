@@ -2,7 +2,6 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
 
 -- UI
 local gui = Instance.new("ScreenGui", game.CoreGui)
@@ -30,7 +29,7 @@ layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 title.LayoutOrder = 0
 
--- Button creator
+-- Button Creator
 local function createButton(text, callback)
 	local button = Instance.new("TextButton")
 	button.Size = UDim2.new(0, 360, 0, 40)
@@ -40,11 +39,13 @@ local function createButton(text, callback)
 	button.TextSize = 14
 	button.Text = text
 	button.Parent = frame
-	button.MouseButton1Click:Connect(callback)
+	button.MouseButton1Click:Connect(function()
+		callback(button)
+	end)
 	return button
 end
 
--- Walkspeed Control
+-- Walkspeed
 local walkspeed = 20
 local wsLabel = Instance.new("TextLabel", frame)
 wsLabel.Size = UDim2.new(0, 360, 0, 20)
@@ -80,7 +81,7 @@ createButton("Fly (Hold F)", function()
 			flying = true
 			while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") do
 				LocalPlayer.Character.Humanoid.Sit = true
-				LocalPlayer.Character.Head.Velocity = Camera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
+				LocalPlayer.Character.Head.Velocity = workspace.CurrentCamera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
 				task.wait()
 			end
 		end
@@ -93,19 +94,6 @@ createButton("Fly (Hold F)", function()
 			end
 		end
 	end)
-end)
-
--- Enlarge Heads (Visual only)
-createButton("Enlarge Heads", function()
-	for _, p in pairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-			local head = p.Character.Head
-			head.Size = Vector3.new(5, 5, 5)
-			head.Transparency = 0.3
-			head.Material = Enum.Material.Neon
-			head.Color = Color3.fromRGB(255, 0, 0)
-		end
-	end
 end)
 
 -- Highlight Players
@@ -159,30 +147,44 @@ createButton("Anti-Ragdoll", function()
 	end)
 end)
 
--- SAFE Aimbot (Camera rotation)
-createButton("Enable Aimbot", function()
-	_G.Aimbot = true
-	local function getClosestTarget()
-		local closest, shortest = nil, math.huge
-		for _, p in pairs(Players:GetPlayers()) do
-			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-				local screenPoint, visible = Camera:WorldToViewportPoint(p.Character.Head.Position)
-				local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - UIS:GetMouseLocation()).Magnitude
-				if distance < shortest and visible then
-					closest = p
-					shortest = distance
+-- Aimbot with ON/OFF Toggle
+local aimbotEnabled = false
+createButton("Aimbot (OFF)", function(btn)
+	aimbotEnabled = not aimbotEnabled
+	btn.Text = "Aimbot (" .. (aimbotEnabled and "ON" or "OFF") .. ")"
+
+	local function getClosestPlayer()
+		local closest = nil
+		local shortestDist = math.huge
+		local mousePos = UIS:GetMouseLocation()
+
+		for _, player in pairs(Players:GetPlayers()) do
+			if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+				local head = player.Character.Head
+				local screenPoint, onScreen = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
+				if onScreen then
+					local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
+					if dist < shortestDist then
+						shortestDist = dist
+						closest = player
+					end
 				end
 			end
 		end
+
 		return closest
 	end
 
-	RunService.RenderStepped:Connect(function()
-		if _G.Aimbot then
-			local target = getClosestTarget()
-			if target and target.Character and target.Character:FindFirstChild("Head") then
-				Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+	task.spawn(function()
+		while true do
+			if aimbotEnabled then
+				local target = getClosestPlayer()
+				if target and target.Character and target.Character:FindFirstChild("Head") then
+					local headPos = target.Character.Head.Position
+					workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, headPos)
+				end
 			end
+			task.wait()
 		end
 	end)
 end)
