@@ -2,9 +2,8 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
 
--- UI
+-- UI Setup
 local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "fakemrleo_SLR_UI"
 
@@ -43,7 +42,7 @@ local function createButton(text, callback)
 	return button
 end
 
--- Walkspeed Controls
+-- Walkspeed
 local walkspeed = 20
 local wsLabel = Instance.new("TextLabel", frame)
 wsLabel.Size = UDim2.new(0, 360, 0, 20)
@@ -71,7 +70,7 @@ createButton("Decrease Walkspeed", function()
 	end
 end)
 
--- Fly (Hold F)
+-- Fly (PC only)
 createButton("Fly (Hold F)", function()
 	local flying = false
 	UIS.InputBegan:Connect(function(input)
@@ -79,7 +78,7 @@ createButton("Fly (Hold F)", function()
 			flying = true
 			while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") do
 				LocalPlayer.Character.Humanoid.Sit = true
-				LocalPlayer.Character.Head.Velocity = Camera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
+				LocalPlayer.Character.Head.Velocity = workspace.CurrentCamera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
 				task.wait()
 			end
 		end
@@ -94,7 +93,7 @@ createButton("Fly (Hold F)", function()
 	end)
 end)
 
--- Enlarge Heads (Visual Only)
+-- Enlarge Heads
 createButton("Enlarge Heads", function()
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
@@ -158,40 +157,71 @@ createButton("Anti-Ragdoll", function()
 	end)
 end)
 
--- Silent Aimbot (Safe, No __namecall)
-createButton("Enable Aimbot", function()
-	_G.SilentAimbot = not _G.SilentAimbot
-end)
-
-local function getClosestPlayer()
-	local closest, shortestDist = nil, math.huge
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-			local headPos = player.Character.Head.Position
-			local screenPos, onScreen = Camera:WorldToViewportPoint(headPos)
-			if onScreen then
-				local mousePos = UIS:GetMouseLocation()
-				local dist = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
-				if dist < shortestDist then
-					closest = player
-					shortestDist = dist
+-- 🔫 PC Silent Aimbot (Right Click)
+createButton("Enable PC Aimbot", function()
+	local cam = workspace.CurrentCamera
+	local function getClosest()
+		local closest, dist = nil, math.huge
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+				local pos, vis = cam:WorldToViewportPoint(p.Character.Head.Position)
+				local mag = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
+				if vis and mag < dist then
+					closest = p
+					dist = mag
 				end
 			end
 		end
+		return closest
 	end
-	return closest
-end
 
-RunService.RenderStepped:Connect(function()
-	if _G.SilentAimbot then
-		local closest = getClosestPlayer()
-		if closest and closest.Character and closest.Character:FindFirstChild("Head") then
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Character.Head.Position)
+	local mt = getrawmetatable(game)
+	setreadonly(mt, false)
+	local old = mt.__namecall
+	mt.__namecall = newcclosure(function(self, ...)
+		local args = {...}
+		if tostring(self) == "FireServer" and getnamecallmethod() == "FireServer" and typeof(args[1]) == "CFrame" and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+			local closest = getClosest()
+			if closest then args[1] = CFrame.new(closest.Character.Head.Position) end
+			return old(self, unpack(args))
 		end
-	end
+		return old(self, ...)
+	end)
 end)
 
--- Toggle UI with RightShift
+-- 📱 Mobile Aimbot
+createButton("Enable Mobile Aimbot", function()
+	local cam = workspace.CurrentCamera
+	local function getClosest()
+		local closest, dist = nil, math.huge
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+				local pos, vis = cam:WorldToViewportPoint(p.Character.Head.Position)
+				local mag = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
+				if vis and mag < dist then
+					closest = p
+					dist = mag
+				end
+			end
+		end
+		return closest
+	end
+
+	local mt = getrawmetatable(game)
+	setreadonly(mt, false)
+	local old = mt.__namecall
+	mt.__namecall = newcclosure(function(self, ...)
+		local args = {...}
+		if tostring(self) == "FireServer" and getnamecallmethod() == "FireServer" and typeof(args[1]) == "CFrame" then
+			local closest = getClosest()
+			if closest then args[1] = CFrame.new(closest.Character.Head.Position) end
+			return old(self, unpack(args))
+		end
+		return old(self, ...)
+	end)
+end)
+
+-- RightShift to toggle UI
 UIS.InputBegan:Connect(function(input, gpe)
 	if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
 		gui.Enabled = not gui.Enabled
