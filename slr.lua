@@ -157,18 +157,23 @@ createButton("Anti-Ragdoll", function()
 	end)
 end)
 
--- 🔫 PC Silent Aimbot (Right Click)
-createButton("Enable PC Aimbot", function()
-	local cam = workspace.CurrentCamera
-	local function getClosest()
+-- === Inserted Aimbot Core Logic from first script, without UI buttons ===
+
+local function setupAimbot(toggleKey)
+	local aimbotEnabled = false
+
+	local function getClosestPlayer()
 		local closest, dist = nil, math.huge
 		for _, p in pairs(Players:GetPlayers()) do
 			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-				local pos, vis = cam:WorldToViewportPoint(p.Character.Head.Position)
-				local mag = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
-				if vis and mag < dist then
-					closest = p
-					dist = mag
+				local head = p.Character.Head.Position
+				local screenPoint, onScreen = workspace.CurrentCamera:WorldToViewportPoint(head)
+				if onScreen then
+					local diff = (Vector2.new(screenPoint.X, screenPoint.Y) - UIS:GetMouseLocation()).Magnitude
+					if diff < dist then
+						dist = diff
+						closest = p
+					end
 				end
 			end
 		end
@@ -180,48 +185,34 @@ createButton("Enable PC Aimbot", function()
 	local old = mt.__namecall
 	mt.__namecall = newcclosure(function(self, ...)
 		local args = {...}
-		if tostring(self) == "FireServer" and getnamecallmethod() == "FireServer" and typeof(args[1]) == "CFrame" and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-			local closest = getClosest()
-			if closest then args[1] = CFrame.new(closest.Character.Head.Position) end
-			return old(self, unpack(args))
-		end
-		return old(self, ...)
-	end)
-end)
-
--- 📱 Mobile Aimbot
-createButton("Enable Mobile Aimbot", function()
-	local cam = workspace.CurrentCamera
-	local function getClosest()
-		local closest, dist = nil, math.huge
-		for _, p in pairs(Players:GetPlayers()) do
-			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-				local pos, vis = cam:WorldToViewportPoint(p.Character.Head.Position)
-				local mag = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
-				if vis and mag < dist then
-					closest = p
-					dist = mag
-				end
+		local method = getnamecallmethod()
+		if tostring(self) == "FireServer" and method == "FireServer" and typeof(args[1]) == "CFrame" and aimbotEnabled then
+			local target = getClosestPlayer()
+			if target then
+				args[1] = CFrame.new(target.Character.Head.Position)
+				return old(self, unpack(args))
 			end
 		end
-		return closest
-	end
-
-	local mt = getrawmetatable(game)
-	setreadonly(mt, false)
-	local old = mt.__namecall
-	mt.__namecall = newcclosure(function(self, ...)
-		local args = {...}
-		if tostring(self) == "FireServer" and getnamecallmethod() == "FireServer" and typeof(args[1]) == "CFrame" then
-			local closest = getClosest()
-			if closest then args[1] = CFrame.new(closest.Character.Head.Position) end
-			return old(self, unpack(args))
-		end
 		return old(self, ...)
 	end)
-end)
 
--- RightShift to toggle UI
+	-- Toggle aimbot with the key
+	UIS.InputBegan:Connect(function(input, gpe)
+		if input.KeyCode == toggleKey and not gpe then
+			aimbotEnabled = not aimbotEnabled
+			print("Aimbot:", aimbotEnabled and "ON" or "OFF")
+		end
+	end)
+end
+
+-- Setup PC Aimbot toggle with RightShift
+setupAimbot(Enum.KeyCode.RightShift)
+
+-- Setup Mobile Aimbot toggle with Unknown key (or you can change this as needed)
+setupAimbot(Enum.KeyCode.Unknown)
+
+
+-- RightShift to toggle UI visibility
 UIS.InputBegan:Connect(function(input, gpe)
 	if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
 		gui.Enabled = not gui.Enabled
