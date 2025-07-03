@@ -1,9 +1,8 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 
--- UI
+-- UI Setup
 local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "fakemrleo_SLR_UI"
 
@@ -42,7 +41,7 @@ local function createButton(text, callback)
 	return button
 end
 
--- Walkspeed Controls
+-- Walkspeed
 local walkspeed = 20
 local wsLabel = Instance.new("TextLabel", frame)
 wsLabel.Size = UDim2.new(0, 360, 0, 20)
@@ -70,7 +69,7 @@ createButton("Decrease Walkspeed", function()
 	end
 end)
 
--- Fly (Hold F)
+-- Fly
 createButton("Fly (Hold F)", function()
 	local flying = false
 	UIS.InputBegan:Connect(function(input)
@@ -93,7 +92,7 @@ createButton("Fly (Hold F)", function()
 	end)
 end)
 
--- Enlarge Heads (Visual Only)
+-- Enlarge Heads
 createButton("Enlarge Heads", function()
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
@@ -160,15 +159,19 @@ end)
 -- Silent Aimbot
 createButton("Enable Aimbot", function()
 	_G.Aimbot = true
+
 	local function getClosestPlayer()
-		local closest, distance = nil, math.huge
+		local closest, dist = nil, math.huge
 		for _, p in pairs(Players:GetPlayers()) do
 			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-				local screenPoint, visible = workspace.CurrentCamera:WorldToViewportPoint(p.Character.Head.Position)
-				local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - UIS:GetMouseLocation()).Magnitude
-				if dist < distance and visible then
-					closest = p
-					distance = dist
+				local pos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(p.Character.Head.Position)
+				if onScreen then
+					local mouse = UIS:GetMouseLocation()
+					local d = (Vector2.new(pos.X, pos.Y) - mouse).Magnitude
+					if d < dist then
+						dist = d
+						closest = p
+					end
 				end
 			end
 		end
@@ -180,12 +183,12 @@ createButton("Enable Aimbot", function()
 	local old = mt.__namecall
 
 	mt.__namecall = newcclosure(function(self, ...)
-		local args = {...}
+		local args = { ... }
 		local method = getnamecallmethod()
 		if tostring(self) == "FireServer" and method == "FireServer" and typeof(args[1]) == "CFrame" and _G.Aimbot then
-			local closest = getClosestPlayer()
-			if closest then
-				args[1] = CFrame.new(closest.Character.Head.Position)
+			local target = getClosestPlayer()
+			if target and target.Character and target.Character:FindFirstChild("Head") then
+				args[1] = CFrame.new(target.Character.Head.Position)
 				return old(self, unpack(args))
 			end
 		end
@@ -193,7 +196,7 @@ createButton("Enable Aimbot", function()
 	end)
 end)
 
--- RightShift to toggle UI
+-- RightShift Toggle UI
 UIS.InputBegan:Connect(function(input, gpe)
 	if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
 		gui.Enabled = not gui.Enabled
