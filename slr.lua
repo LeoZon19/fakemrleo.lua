@@ -2,14 +2,16 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local mouse = LocalPlayer:GetMouse()
 
--- UI
+-- UI Setup
 local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "fakemrleo_SLR_UI"
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 400, 0, 500)
-frame.Position = UDim2.new(0.5, -200, 0.5, -250)
+frame.Size = UDim2.new(0, 400, 0, 550)
+frame.Position = UDim2.new(0.5, -200, 0.5, -275)
 frame.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
 frame.BorderSizePixel = 5
 frame.Active = true
@@ -42,7 +44,7 @@ local function createButton(text, callback)
 	return button
 end
 
--- Walkspeed Controls
+-- Walkspeed
 local walkspeed = 20
 local wsLabel = Instance.new("TextLabel", frame)
 wsLabel.Size = UDim2.new(0, 360, 0, 20)
@@ -144,40 +146,60 @@ createButton("Anti-Ragdoll", function()
 	end)
 end)
 
--- Silent Aimbot Toggle
-local aimbotEnabled = false
-local aimbotButton = createButton("Enable Aimbot", function()
-	aimbotEnabled = not aimbotEnabled
-	_G.Aimbot = aimbotEnabled
-	aimbotButton.Text = aimbotEnabled and "Disable Aimbot" or "Enable Aimbot"
+-- 🔘 Silent Aimbot Toggle
+local silentAimbot = false
+local aimbotButton = createButton("Enable Silent Aimbot", function()
+	silentAimbot = not silentAimbot
+	_G.SilentAimbot = silentAimbot
+	aimbotButton.Text = silentAimbot and "Disable Silent Aimbot" or "Enable Silent Aimbot"
 end)
 
--- Aimbot logic
+-- 🔘 Camera-Lock Aimbot Toggle (Q key)
+local cameraAimbot = false
+local AimPart = "UpperTorso"
+
+local camAimbotLabel = Instance.new("TextLabel", frame)
+camAimbotLabel.Size = UDim2.new(0, 360, 0, 20)
+camAimbotLabel.BackgroundTransparency = 1
+camAimbotLabel.TextColor3 = Color3.new(1, 1, 1)
+camAimbotLabel.Font = Enum.Font.Gotham
+camAimbotLabel.TextSize = 14
+camAimbotLabel.Text = "Camera-Lock Aimbot: Press Q to Toggle"
+
+UIS.InputBegan:Connect(function(input, gameProcessed)
+	if not gameProcessed and input.KeyCode == Enum.KeyCode.Q then
+		cameraAimbot = not cameraAimbot
+		camAimbotLabel.Text = cameraAimbot and "Camera-Lock Aimbot: ENABLED (Q)" or "Camera-Lock Aimbot: DISABLED (Q)"
+	end
+end)
+
+-- 📌 Closest Player Finder
 local function getClosestPlayer()
 	local closest, distance = nil, math.huge
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("UpperTorso") then
-			local screenPoint, visible = workspace.CurrentCamera:WorldToViewportPoint(p.Character.UpperTorso.Position)
-			local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - UIS:GetMouseLocation()).Magnitude
-			if dist < distance and visible then
-				closest = p
-				distance = dist
+			local pos, onScreen = Camera:WorldToViewportPoint(p.Character.UpperTorso.Position)
+			if onScreen then
+				local dist = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
+				if dist < distance then
+					closest = p
+					distance = dist
+				end
 			end
 		end
 	end
 	return closest
 end
 
+-- 🎯 Silent Aimbot Hook
 local mt = getrawmetatable(game)
 setreadonly(mt, false)
 local old = mt.__namecall
-
 mt.__namecall = newcclosure(function(self, ...)
-	local args = {...}
-	local method = getnamecallmethod()
-	if tostring(self):lower():find("fire") and method == "FireServer" and typeof(args[1]) == "CFrame" and _G.Aimbot then
+	local args = { ... }
+	if _G.SilentAimbot and getnamecallmethod() == "FireServer" and typeof(args[1]) == "CFrame" and tostring(self):lower():find("fire") then
 		local target = getClosestPlayer()
-		if target and target.Character and target.Character:FindFirstChild("UpperTorso") then
+		if target then
 			args[1] = CFrame.new(target.Character.UpperTorso.Position)
 			return old(self, unpack(args))
 		end
@@ -185,7 +207,24 @@ mt.__namecall = newcclosure(function(self, ...)
 	return old(self, ...)
 end)
 
--- Toggle UI with RightShift
+-- 🧠 Camera Aimbot Logic
+RunService.RenderStepped:Connect(function()
+	if cameraAimbot then
+		local target = getClosestPlayer()
+		if target and target.Character and target.Character:FindFirstChild(AimPart) then
+			local part = target.Character[AimPart]
+			local dir = (part.Position - Camera.CFrame.Position).Unit
+			Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + dir)
+
+			local char = LocalPlayer.Character
+			if char and char:FindFirstChild("HumanoidRootPart") then
+				char.HumanoidRootPart.CFrame = CFrame.new(char.HumanoidRootPart.Position, Vector3.new(part.Position.X, char.HumanoidRootPart.Position.Y, part.Position.Z))
+			end
+		end
+	end
+end)
+
+-- UI Toggle (RightShift)
 UIS.InputBegan:Connect(function(input, gpe)
 	if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
 		gui.Enabled = not gui.Enabled
