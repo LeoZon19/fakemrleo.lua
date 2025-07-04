@@ -144,40 +144,45 @@ createButton("Anti-Ragdoll", function()
 	end)
 end)
 
--- Silent Aimbot (Targets UpperTorso)
-createButton("Enable Aimbot", function()
-	_G.Aimbot = true
-	local function getClosestPlayer()
-		local closest, distance = nil, math.huge
-		for _, p in pairs(Players:GetPlayers()) do
-			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("UpperTorso") then
-				local screenPoint, visible = workspace.CurrentCamera:WorldToViewportPoint(p.Character.UpperTorso.Position)
-				local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - UIS:GetMouseLocation()).Magnitude
-				if dist < distance and visible then
-					closest = p
-					distance = dist
-				end
+-- Silent Aimbot Toggle
+local aimbotEnabled = false
+local aimbotButton = createButton("Enable Aimbot", function()
+	aimbotEnabled = not aimbotEnabled
+	_G.Aimbot = aimbotEnabled
+	aimbotButton.Text = aimbotEnabled and "Disable Aimbot" or "Enable Aimbot"
+end)
+
+-- Aimbot logic
+local function getClosestPlayer()
+	local closest, distance = nil, math.huge
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("UpperTorso") then
+			local screenPoint, visible = workspace.CurrentCamera:WorldToViewportPoint(p.Character.UpperTorso.Position)
+			local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - UIS:GetMouseLocation()).Magnitude
+			if dist < distance and visible then
+				closest = p
+				distance = dist
 			end
 		end
-		return closest
 	end
+	return closest
+end
 
-	local mt = getrawmetatable(game)
-	setreadonly(mt, false)
-	local old = mt.__namecall
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
+local old = mt.__namecall
 
-	mt.__namecall = newcclosure(function(self, ...)
-		local args = {...}
-		local method = getnamecallmethod()
-		if tostring(self) == "FireServer" and method == "FireServer" and typeof(args[1]) == "CFrame" and _G.Aimbot then
-			local closest = getClosestPlayer()
-			if closest then
-				args[1] = CFrame.new(closest.Character.UpperTorso.Position)
-				return old(self, unpack(args))
-			end
+mt.__namecall = newcclosure(function(self, ...)
+	local args = {...}
+	local method = getnamecallmethod()
+	if tostring(self):lower():find("fire") and method == "FireServer" and typeof(args[1]) == "CFrame" and _G.Aimbot then
+		local target = getClosestPlayer()
+		if target and target.Character and target.Character:FindFirstChild("UpperTorso") then
+			args[1] = CFrame.new(target.Character.UpperTorso.Position)
+			return old(self, unpack(args))
 		end
-		return old(self, ...)
-	end)
+	end
+	return old(self, ...)
 end)
 
 -- Toggle UI with RightShift
