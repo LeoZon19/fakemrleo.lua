@@ -10,8 +10,8 @@ local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "fakemrleo_SLR_UI"
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 400, 0, 550)
-frame.Position = UDim2.new(0.5, -200, 0.5, -275)
+frame.Size = UDim2.new(0, 400, 0, 500)
+frame.Position = UDim2.new(0.5, -200, 0.5, -250)
 frame.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
 frame.BorderSizePixel = 5
 frame.Active = true
@@ -146,15 +146,7 @@ createButton("Anti-Ragdoll", function()
 	end)
 end)
 
--- 🔘 Silent Aimbot Toggle
-local silentAimbot = false
-local aimbotButton = createButton("Enable Silent Aimbot", function()
-	silentAimbot = not silentAimbot
-	_G.SilentAimbot = silentAimbot
-	aimbotButton.Text = silentAimbot and "Disable Silent Aimbot" or "Enable Silent Aimbot"
-end)
-
--- 🔘 Camera-Lock Aimbot Toggle (Q key)
+-- Camera-Lock Aimbot (Q Toggle)
 local cameraAimbot = false
 local AimPart = "UpperTorso"
 
@@ -173,7 +165,6 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
--- 📌 Closest Player Finder
 local function getClosestPlayer()
 	local closest, distance = nil, math.huge
 	for _, p in pairs(Players:GetPlayers()) do
@@ -191,23 +182,6 @@ local function getClosestPlayer()
 	return closest
 end
 
--- 🎯 Silent Aimbot Hook
-local mt = getrawmetatable(game)
-setreadonly(mt, false)
-local old = mt.__namecall
-mt.__namecall = newcclosure(function(self, ...)
-	local args = { ... }
-	if _G.SilentAimbot and getnamecallmethod() == "FireServer" and typeof(args[1]) == "CFrame" and tostring(self):lower():find("fire") then
-		local target = getClosestPlayer()
-		if target then
-			args[1] = CFrame.new(target.Character.UpperTorso.Position)
-			return old(self, unpack(args))
-		end
-	end
-	return old(self, ...)
-end)
-
--- 🧠 Camera Aimbot Logic
 RunService.RenderStepped:Connect(function()
 	if cameraAimbot then
 		local target = getClosestPlayer()
@@ -224,7 +198,7 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- UI Toggle (RightShift)
+-- Toggle UI (RightShift)
 UIS.InputBegan:Connect(function(input, gpe)
 	if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
 		gui.Enabled = not gui.Enabled
