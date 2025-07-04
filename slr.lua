@@ -29,7 +29,6 @@ layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 title.LayoutOrder = 0
 
--- Button Creator
 local function createButton(text, callback)
 	local button = Instance.new("TextButton")
 	button.Size = UDim2.new(0, 360, 0, 40)
@@ -39,13 +38,11 @@ local function createButton(text, callback)
 	button.TextSize = 14
 	button.Text = text
 	button.Parent = frame
-	button.MouseButton1Click:Connect(function()
-		callback(button)
-	end)
+	button.MouseButton1Click:Connect(callback)
 	return button
 end
 
--- Walkspeed
+-- Walkspeed Controls
 local walkspeed = 20
 local wsLabel = Instance.new("TextLabel", frame)
 wsLabel.Size = UDim2.new(0, 360, 0, 20)
@@ -79,9 +76,9 @@ createButton("Fly (Hold F)", function()
 	UIS.InputBegan:Connect(function(input)
 		if input.KeyCode == Enum.KeyCode.F then
 			flying = true
-			while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") do
+			while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("UpperTorso") do
 				LocalPlayer.Character.Humanoid.Sit = true
-				LocalPlayer.Character.Head.Velocity = workspace.CurrentCamera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
+				LocalPlayer.Character.UpperTorso.Velocity = workspace.CurrentCamera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
 				task.wait()
 			end
 		end
@@ -147,45 +144,39 @@ createButton("Anti-Ragdoll", function()
 	end)
 end)
 
--- Aimbot with ON/OFF Toggle
-local aimbotEnabled = false
-createButton("Aimbot (OFF)", function(btn)
-	aimbotEnabled = not aimbotEnabled
-	btn.Text = "Aimbot (" .. (aimbotEnabled and "ON" or "OFF") .. ")"
-
+-- Silent Aimbot (Targets UpperTorso)
+createButton("Enable Aimbot", function()
+	_G.Aimbot = true
 	local function getClosestPlayer()
-		local closest = nil
-		local shortestDist = math.huge
-		local mousePos = UIS:GetMouseLocation()
-
-		for _, player in pairs(Players:GetPlayers()) do
-			if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-				local head = player.Character.Head
-				local screenPoint, onScreen = workspace.CurrentCamera:WorldToViewportPoint(head.Position)
-				if onScreen then
-					local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
-					if dist < shortestDist then
-						shortestDist = dist
-						closest = player
-					end
+		local closest, distance = nil, math.huge
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("UpperTorso") then
+				local screenPoint, visible = workspace.CurrentCamera:WorldToViewportPoint(p.Character.UpperTorso.Position)
+				local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - UIS:GetMouseLocation()).Magnitude
+				if dist < distance and visible then
+					closest = p
+					distance = dist
 				end
 			end
 		end
-
 		return closest
 	end
 
-	task.spawn(function()
-		while true do
-			if aimbotEnabled then
-				local target = getClosestPlayer()
-				if target and target.Character and target.Character:FindFirstChild("Head") then
-					local headPos = target.Character.Head.Position
-					workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, headPos)
-				end
+	local mt = getrawmetatable(game)
+	setreadonly(mt, false)
+	local old = mt.__namecall
+
+	mt.__namecall = newcclosure(function(self, ...)
+		local args = {...}
+		local method = getnamecallmethod()
+		if tostring(self) == "FireServer" and method == "FireServer" and typeof(args[1]) == "CFrame" and _G.Aimbot then
+			local closest = getClosestPlayer()
+			if closest then
+				args[1] = CFrame.new(closest.Character.UpperTorso.Position)
+				return old(self, unpack(args))
 			end
-			task.wait()
 		end
+		return old(self, ...)
 	end)
 end)
 
