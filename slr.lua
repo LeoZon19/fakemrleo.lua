@@ -3,204 +3,259 @@ local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
-local mouse = LocalPlayer:GetMouse()
+local VirtualInput = game:GetService("VirtualInputManager")
 
--- UI Setup
+-- Core Variables
+local walkspeed = 20
+local TriggerBotEnabled = false
+local CameraAimbot = false
+local KillConfirmed = false
+local AimPart = "UpperTorso"
+local flying = false
+
+-- GUI Setup
 local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "fakemrleo_SLR_UI"
+gui.Name = "fakemrleo_v1"
+gui.Enabled = true
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 400, 0, 500)
-frame.Position = UDim2.new(0.5, -200, 0.5, -250)
-frame.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-frame.BorderSizePixel = 5
-frame.Active = true
-frame.Draggable = true
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 500, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -150)
+mainFrame.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
 
-local title = Instance.new("TextLabel", frame)
+-- Title
+local title = Instance.new("TextLabel", mainFrame)
 title.Size = UDim2.new(1, 0, 0, 40)
-title.Text = "fakemrleo's SLR Script"
-title.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 24
+title.TextSize = 22
+title.Text = "fakemrleo v1 Script"
 
-local layout = Instance.new("UIListLayout", frame)
-layout.Padding = UDim.new(0, 8)
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+-- Side Panel
+local buttonSide = Instance.new("Frame", mainFrame)
+buttonSide.Size = UDim2.new(0, 150, 0, 260)
+buttonSide.Position = UDim2.new(0, 0, 0, 40)
+buttonSide.BackgroundColor3 = Color3.fromRGB(90, 0, 0)
+
+local layout = Instance.new("UIListLayout", buttonSide)
+layout.Padding = UDim.new(0, 5)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
-title.LayoutOrder = 0
 
+-- Center Panel
+local centerPanel = Instance.new("Frame", mainFrame)
+centerPanel.Size = UDim2.new(0, 330, 0, 260)
+centerPanel.Position = UDim2.new(0, 160, 0, 40)
+centerPanel.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+
+-- Kill Confirm Label
+local killLabel = Instance.new("TextLabel", centerPanel)
+killLabel.Size = UDim2.new(1, 0, 0, 25)
+killLabel.Position = UDim2.new(0, 0, 0, 0)
+killLabel.Text = "Kill Confirm: None"
+killLabel.BackgroundTransparency = 1
+killLabel.TextColor3 = Color3.new(1, 1, 1)
+killLabel.Font = Enum.Font.GothamBold
+killLabel.TextSize = 16
+
+-- Aimbot Label
+local aimbotLabel = Instance.new("TextLabel", centerPanel)
+aimbotLabel.Size = UDim2.new(1, 0, 0, 25)
+aimbotLabel.Position = UDim2.new(0, 0, 0, 25)
+aimbotLabel.Text = "Aimbot: OFF"
+aimbotLabel.BackgroundTransparency = 1
+aimbotLabel.TextColor3 = Color3.new(1, 1, 1)
+aimbotLabel.Font = Enum.Font.Gotham
+aimbotLabel.TextSize = 16
+
+-- TriggerBot Label
+local triggerLabel = Instance.new("TextLabel", centerPanel)
+triggerLabel.Size = UDim2.new(1, 0, 0, 25)
+triggerLabel.Position = UDim2.new(0, 0, 0, 50)
+triggerLabel.Text = "TriggerBot: OFF"
+triggerLabel.BackgroundTransparency = 1
+triggerLabel.TextColor3 = Color3.new(1, 1, 1)
+triggerLabel.Font = Enum.Font.Gotham
+triggerLabel.TextSize = 16
+
+-- Button Creator
 local function createButton(text, callback)
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(0, 360, 0, 40)
-	button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-	button.TextColor3 = Color3.fromRGB(0, 0, 0)
-	button.Font = Enum.Font.GothamBold
-	button.TextSize = 14
-	button.Text = text
-	button.Parent = frame
-	button.MouseButton1Click:Connect(callback)
-	return button
+    local btn = Instance.new("TextButton", buttonSide)
+    btn.Size = UDim2.new(1, -10, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.Text = text
+    btn.MouseButton1Click:Connect(function()
+        callback(btn)
+    end)
 end
 
--- Walkspeed
-local walkspeed = 20
-local wsLabel = Instance.new("TextLabel", frame)
-wsLabel.Size = UDim2.new(0, 360, 0, 20)
-wsLabel.BackgroundTransparency = 1
-wsLabel.TextColor3 = Color3.new(1, 1, 1)
-wsLabel.Font = Enum.Font.Gotham
-wsLabel.TextSize = 14
-wsLabel.Text = "Walkspeed: " .. walkspeed
-
+-- Walkspeed Buttons
 createButton("Increase Walkspeed", function()
-	walkspeed = math.min(walkspeed + 5, 200)
-	wsLabel.Text = "Walkspeed: " .. walkspeed
-	local char = LocalPlayer.Character
-	if char and char:FindFirstChildOfClass("Humanoid") then
-		char:FindFirstChildOfClass("Humanoid").WalkSpeed = walkspeed
-	end
+    walkspeed = walkspeed + 5
+    if LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = walkspeed
+        end
+    end
 end)
 
 createButton("Decrease Walkspeed", function()
-	walkspeed = math.max(walkspeed - 5, 5)
-	wsLabel.Text = "Walkspeed: " .. walkspeed
-	local char = LocalPlayer.Character
-	if char and char:FindFirstChildOfClass("Humanoid") then
-		char:FindFirstChildOfClass("Humanoid").WalkSpeed = walkspeed
-	end
+    walkspeed = math.max(5, walkspeed - 5)
+    if LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = walkspeed
+        end
+    end
 end)
 
--- Fly (Hold F)
+-- Fly toggle
+local flyConnectionBegan
+local flyConnectionEnded
+
 createButton("Fly (Hold F)", function()
-	local flying = false
-	UIS.InputBegan:Connect(function(input)
-		if input.KeyCode == Enum.KeyCode.F then
-			flying = true
-			while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("UpperTorso") do
-				LocalPlayer.Character.Humanoid.Sit = true
-				LocalPlayer.Character.UpperTorso.Velocity = workspace.CurrentCamera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
-				task.wait()
-			end
-		end
-	end)
-	UIS.InputEnded:Connect(function(input)
-		if input.KeyCode == Enum.KeyCode.F then
-			flying = false
-			if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-				LocalPlayer.Character.Humanoid.Sit = false
-			end
-		end
-	end)
+    if flyConnectionBegan or flyConnectionEnded then return end -- Prevent duplicate connections
+
+    flying = false
+
+    flyConnectionBegan = UIS.InputBegan:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.F then
+            flying = true
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("UpperTorso")
+            while flying and hrp and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") do
+                LocalPlayer.Character.Humanoid.Sit = true
+                hrp.Velocity = Camera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
+                task.wait()
+            end
+        end
+    end)
+
+    flyConnectionEnded = UIS.InputEnded:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.F then
+            flying = false
+            if LocalPlayer.Character then
+                local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+                if humanoid then
+                    humanoid.Sit = false
+                end
+            end
+        end
+    end)
 end)
 
 -- Highlight Players
 createButton("Highlight Players", function()
-	for _, p in pairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChildOfClass("Highlight") then
-			local hl = Instance.new("Highlight", p.Character)
-			hl.FillColor = Color3.fromRGB(0, 255, 0)
-			hl.OutlineColor = Color3.fromRGB(0, 0, 0)
-			hl.FillTransparency = 0.25
-			hl.OutlineTransparency = 0
-		end
-	end
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChildOfClass("Highlight") then
+            local hl = Instance.new("Highlight", p.Character)
+            hl.FillColor = Color3.fromRGB(255, 0, 0)
+            hl.OutlineColor = Color3.new(1, 1, 1)
+            hl.FillTransparency = 0.25
+            hl.OutlineTransparency = 0
+        end
+    end
 end)
 
--- Show Usernames
-createButton("Show Usernames", function()
-	for _, p in pairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChild("UsernameTag") then
-			local tag = Instance.new("BillboardGui", p.Character)
-			tag.Name = "UsernameTag"
-			tag.Size = UDim2.new(0, 200, 0, 50)
-			tag.AlwaysOnTop = true
-			tag.StudsOffset = Vector3.new(0, 3, 0)
-			local label = Instance.new("TextLabel", tag)
-			label.Size = UDim2.new(1, 0, 1, 0)
-			label.Text = p.Name
-			label.TextColor3 = Color3.new(1, 1, 1)
-			label.BackgroundTransparency = 1
-			label.Font = Enum.Font.GothamBold
-			label.TextSize = 14
-		end
-	end
+-- Aimbot Toggle Button
+createButton("Toggle Aimbot", function(btn)
+    CameraAimbot = not CameraAimbot
+    aimbotLabel.Text = "Aimbot: " .. (CameraAimbot and "ON" or "OFF")
 end)
 
--- Anti-Ragdoll
-createButton("Anti-Ragdoll", function()
-	_G.AntiRagdoll = true
-	task.spawn(function()
-		while _G.AntiRagdoll do
-			local char = LocalPlayer.Character
-			if char then
-				for _, v in pairs(char:GetDescendants()) do
-					if v:IsA("BallSocketConstraint") or v.Name:lower():find("ragdoll") then
-						v:Destroy()
-					end
-				end
-			end
-			task.wait(0.1)
-		end
-	end)
+-- TriggerBot Toggle Button
+createButton("Toggle TriggerBot", function(btn)
+    TriggerBotEnabled = not TriggerBotEnabled
+    triggerLabel.Text = "TriggerBot: " .. (TriggerBotEnabled and "ON" or "OFF")
 end)
 
--- Camera-Lock Aimbot (Q Toggle)
-local cameraAimbot = false
-local AimPart = "UpperTorso"
-
-local camAimbotLabel = Instance.new("TextLabel", frame)
-camAimbotLabel.Size = UDim2.new(0, 360, 0, 20)
-camAimbotLabel.BackgroundTransparency = 1
-camAimbotLabel.TextColor3 = Color3.new(1, 1, 1)
-camAimbotLabel.Font = Enum.Font.Gotham
-camAimbotLabel.TextSize = 14
-camAimbotLabel.Text = "Camera-Lock Aimbot: Press Q to Toggle"
-
-UIS.InputBegan:Connect(function(input, gameProcessed)
-	if not gameProcessed and input.KeyCode == Enum.KeyCode.Q then
-		cameraAimbot = not cameraAimbot
-		camAimbotLabel.Text = cameraAimbot and "Camera-Lock Aimbot: ENABLED (Q)" or "Camera-Lock Aimbot: DISABLED (Q)"
-	end
-end)
-
-local function getClosestPlayer()
-	local closest, distance = nil, math.huge
-	for _, p in pairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("UpperTorso") then
-			local pos, onScreen = Camera:WorldToViewportPoint(p.Character.UpperTorso.Position)
-			if onScreen then
-				local dist = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
-				if dist < distance then
-					closest = p
-					distance = dist
-				end
-			end
-		end
-	end
-	return closest
+-- TriggerBot + Kill Confirm logic
+local function onPlayerDied(player)
+    if KillConfirmed then return end
+    KillConfirmed = true
+    killLabel.Text = "Kill Confirm: " .. player.Name
+    task.delay(2.5, function()
+        KillConfirmed = false
+        killLabel.Text = "Kill Confirm: None"
+    end)
 end
 
+-- TriggerBot Logic
 RunService.RenderStepped:Connect(function()
-	if cameraAimbot then
-		local target = getClosestPlayer()
-		if target and target.Character and target.Character:FindFirstChild(AimPart) then
-			local part = target.Character[AimPart]
-			local dir = (part.Position - Camera.CFrame.Position).Unit
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + dir)
+    if TriggerBotEnabled then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(AimPart) then
+                local part = p.Character[AimPart]
+                local mousePos = UIS:GetMouseLocation()
+                local screenPoint, onScreen = Camera:WorldToViewportPoint(part.Position)
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
 
-			local char = LocalPlayer.Character
-			if char and char:FindFirstChild("HumanoidRootPart") then
-				char.HumanoidRootPart.CFrame = CFrame.new(char.HumanoidRootPart.Position, Vector3.new(part.Position.X, char.HumanoidRootPart.Position.Y, part.Position.Z))
-			end
-		end
-	end
+                if onScreen and distance < 50 then
+                    -- Fire mouse click down and up events at that position
+                    VirtualInput:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, true, game, 0)
+                    VirtualInput:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, false, game, 0)
+
+                    -- Check if humanoid is dead
+                    local humanoid = p.Character:FindFirstChild("Humanoid")
+                    if humanoid and humanoid.Health <= 0 then
+                        onPlayerDied(p)
+                    end
+                end
+            end
+        end
+    end
 end)
 
--- Toggle UI (RightShift)
+-- Aimbot Loop Helper
+local function GetClosestPlayer()
+    local closest, dist = nil, math.huge
+    local mousePos = UIS:GetMouseLocation()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(AimPart) then
+            local pos, onScreen = Camera:WorldToViewportPoint(p.Character[AimPart].Position)
+            if onScreen then
+                local d = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+                if d < dist then
+                    dist = d
+                    closest = p
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- Aimbot Logic
+RunService.RenderStepped:Connect(function()
+    if CameraAimbot then
+        local target = GetClosestPlayer()
+        if target and target.Character and target.Character:FindFirstChild(AimPart) then
+            local part = target.Character[AimPart]
+            local dir = (part.Position - Camera.CFrame.Position).Unit
+
+            -- Rotate camera towards target smoothly
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + dir)
+
+            -- Optionally rotate character's HumanoidRootPart to face target's XZ position
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
+                hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(part.Position.X, hrp.Position.Y, part.Position.Z))
+            end
+        end
+    end
+end)
+
+-- RightShift to Toggle UI
 UIS.InputBegan:Connect(function(input, gpe)
-	if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
-		gui.Enabled = not gui.Enabled
-	end
+    if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
+        gui.Enabled = not gui.Enabled
+    end
 end)
