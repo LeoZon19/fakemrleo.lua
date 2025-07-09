@@ -1,79 +1,94 @@
---// SERVICES
+-- fakemrleo v1 Script
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 local VirtualInput = game:GetService("VirtualInputManager")
 local Lighting = game:GetService("Lighting")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 
---// VARIABLES
+-- Core Variables
 local walkspeed = 20
 local TriggerBotEnabled = false
 local CameraAimbot = false
 local KillConfirmed = false
 local AimPart = "UpperTorso"
 local InfiniteStamina = false
-local GodMode = false
+local GodmodeEnabled = false
 
---// GUI SETUP
+-- GUI Setup
 local gui = Instance.new("ScreenGui", game.CoreGui)
 gui.Name = "fakemrleo_v1"
 
-local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.new(0, 600, 0, 400)
-mainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
-mainFrame.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-mainFrame.Active = true
-mainFrame.Draggable = true
+local tabHolder = Instance.new("Frame", gui)
+tabHolder.Size = UDim2.new(0, 550, 0, 350)
+tabHolder.Position = UDim2.new(0.5, -275, 0.5, -175)
+tabHolder.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+tabHolder.Active = true
+tabHolder.Draggable = true
 
--- TAB BUTTONS
-local tabButtons = Instance.new("Frame", mainFrame)
-tabButtons.Size = UDim2.new(0, 100, 1, 0)
-tabButtons.Position = UDim2.new(0, 0, 0, 0)
-tabButtons.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
-local tabLayout = Instance.new("UIListLayout", tabButtons)
-tabLayout.FillDirection = Enum.FillDirection.Vertical
-tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tabLayout.Padding = UDim.new(0, 5)
+-- Tab Buttons
+local tabButtons = Instance.new("Frame", tabHolder)
+tabButtons.Size = UDim2.new(0, 550, 0, 40)
+tabButtons.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
 
-local function createTab(name)
-	local tab = Instance.new("TextButton")
-	tab.Size = UDim2.new(1, 0, 0, 30)
-	tab.BackgroundColor3 = Color3.fromRGB(160, 0, 0)
-	tab.TextColor3 = Color3.new(1, 1, 1)
-	tab.Font = Enum.Font.GothamBold
-	tab.TextSize = 14
-	tab.Text = name
-	tab.Parent = tabButtons
-	return tab
-end
+local mainTabBtn = Instance.new("TextButton", tabButtons)
+mainTabBtn.Size = UDim2.new(0, 180, 1, 0)
+mainTabBtn.Position = UDim2.new(0, 0, 0, 0)
+mainTabBtn.Text = "Main"
+mainTabBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+mainTabBtn.TextColor3 = Color3.new(1, 1, 1)
 
--- TAB FRAMES
-local tabFrames = {}
-local function makeTabFrame()
-	local frame = Instance.new("Frame", mainFrame)
-	frame.Size = UDim2.new(0, 490, 1, 0)
-	frame.Position = UDim2.new(0, 110, 0, 0)
-	frame.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+local aimbotTabBtn = Instance.new("TextButton", tabButtons)
+aimbotTabBtn.Size = UDim2.new(0, 180, 1, 0)
+aimbotTabBtn.Position = UDim2.new(0, 180, 0, 0)
+aimbotTabBtn.Text = "Aimbot"
+aimbotTabBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+aimbotTabBtn.TextColor3 = Color3.new(1, 1, 1)
+
+local guiTabBtn = Instance.new("TextButton", tabButtons)
+guiTabBtn.Size = UDim2.new(0, 190, 1, 0)
+guiTabBtn.Position = UDim2.new(0, 360, 0, 0)
+guiTabBtn.Text = "GUI"
+guiTabBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+guiTabBtn.TextColor3 = Color3.new(1, 1, 1)
+
+-- Panels
+local tabs = {
+	Main = Instance.new("Frame", tabHolder),
+	Aimbot = Instance.new("Frame", tabHolder),
+	GUI = Instance.new("Frame", tabHolder)
+}
+
+for name, frame in pairs(tabs) do
+	frame.Size = UDim2.new(1, 0, 1, -40)
+	frame.Position = UDim2.new(0, 0, 0, 40)
 	frame.Visible = false
-	return frame
+	frame.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
 end
 
-local function clearTabs()
-	for _, tab in pairs(tabFrames) do
-		tab.Visible = false
-	end
-end
+tabs.Main.Visible = true
 
---// MAIN TAB
-local mainTab = makeTabFrame()
-tabFrames["Main"] = mainTab
+mainTabBtn.MouseButton1Click:Connect(function()
+	tabs.Main.Visible = true
+	tabs.Aimbot.Visible = false
+	tabs.GUI.Visible = false
+end)
+aimbotTabBtn.MouseButton1Click:Connect(function()
+	tabs.Main.Visible = false
+	tabs.Aimbot.Visible = true
+	tabs.GUI.Visible = false
+end)
+guiTabBtn.MouseButton1Click:Connect(function()
+	tabs.Main.Visible = false
+	tabs.Aimbot.Visible = false
+	tabs.GUI.Visible = true
+end)
 
-local function createMainButton(text, callback)
-	local btn = Instance.new("TextButton", mainTab)
-	btn.Size = UDim2.new(0, 470, 0, 40)
-	btn.Position = UDim2.new(0, 10, 0, (#mainTab:GetChildren() - 1) * 45 + 10)
+-- Button Maker
+local function createButton(text, parent, callback)
+	local btn = Instance.new("TextButton", parent)
+	btn.Size = UDim2.new(0, 500, 0, 35)
 	btn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 	btn.TextColor3 = Color3.new(1, 1, 1)
 	btn.Font = Enum.Font.GothamBold
@@ -82,7 +97,18 @@ local function createMainButton(text, callback)
 	btn.MouseButton1Click:Connect(callback)
 end
 
-createMainButton("Fly (Hold F)", function()
+-- MAIN TAB
+createButton("Infinite Stamina", tabs.Main, function()
+	InfiniteStamina = not InfiniteStamina
+	print("Infinite Stamina:", InfiniteStamina)
+end)
+
+createButton("Godmode", tabs.Main, function()
+	GodmodeEnabled = not GodmodeEnabled
+	print("Godmode:", GodmodeEnabled)
+end)
+
+createButton("Fly (Hold F)", tabs.Main, function()
 	local flying = false
 	UIS.InputBegan:Connect(function(input)
 		if input.KeyCode == Enum.KeyCode.F then
@@ -90,19 +116,21 @@ createMainButton("Fly (Hold F)", function()
 			while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("UpperTorso") do
 				LocalPlayer.Character.Humanoid.Sit = true
 				LocalPlayer.Character.UpperTorso.Velocity = Camera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
-				RunService.RenderStepped:Wait()
+				task.wait()
 			end
 		end
 	end)
 	UIS.InputEnded:Connect(function(input)
 		if input.KeyCode == Enum.KeyCode.F then
 			flying = false
-			LocalPlayer.Character.Humanoid.Sit = false
+			if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+				LocalPlayer.Character.Humanoid.Sit = false
+			end
 		end
 	end)
 end)
 
-createMainButton("Highlight Players", function()
+createButton("Highlight Players", tabs.Main, function()
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChildOfClass("Highlight") then
 			local hl = Instance.new("Highlight", p.Character)
@@ -114,7 +142,7 @@ createMainButton("Highlight Players", function()
 	end
 end)
 
-createMainButton("Show Usernames", function()
+createButton("Show Usernames", tabs.Main, function()
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChild("UsernameTag") then
 			local tag = Instance.new("BillboardGui", p.Character)
@@ -133,169 +161,73 @@ createMainButton("Show Usernames", function()
 	end
 end)
 
-createMainButton("Toggle Infinite Stamina", function()
-	InfiniteStamina = not InfiniteStamina
+-- AIMBOT TAB
+createButton("Toggle Aimbot (Q)", tabs.Aimbot, function()
+	CameraAimbot = not CameraAimbot
+	print("Aimbot:", CameraAimbot)
 end)
 
-createMainButton("Toggle Godmode", function()
-	GodMode = not GodMode
-end)
-
---// AIMBOT TAB
-local aimbotTab = makeTabFrame()
-tabFrames["Aimbot"] = aimbotTab
-
-local aimbotLabel = Instance.new("TextLabel", aimbotTab)
-aimbotLabel.Size = UDim2.new(0, 470, 0, 30)
-aimbotLabel.Position = UDim2.new(0, 10, 0, 10)
-aimbotLabel.Text = "Aimbot: OFF (Q)"
-aimbotLabel.TextColor3 = Color3.new(1, 1, 1)
-aimbotLabel.BackgroundTransparency = 1
-aimbotLabel.Font = Enum.Font.GothamBold
-aimbotLabel.TextSize = 16
-
-local triggerLabel = Instance.new("TextLabel", aimbotTab)
-triggerLabel.Size = UDim2.new(0, 470, 0, 30)
-triggerLabel.Position = UDim2.new(0, 10, 0, 45)
-triggerLabel.Text = "TriggerBot: OFF"
-triggerLabel.TextColor3 = Color3.new(1, 1, 1)
-triggerLabel.BackgroundTransparency = 1
-triggerLabel.Font = Enum.Font.Gotham
-triggerLabel.TextSize = 16
-
-UIS.InputBegan:Connect(function(input, gpe)
-	if not gpe and input.KeyCode == Enum.KeyCode.Q then
-		CameraAimbot = not CameraAimbot
-		aimbotLabel.Text = "Aimbot: " .. (CameraAimbot and "ON" or "OFF") .. " (Q)"
-	end
-end)
-
-createMainButton("Toggle TriggerBot", function()
+createButton("Toggle TriggerBot", tabs.Aimbot, function()
 	TriggerBotEnabled = not TriggerBotEnabled
-	triggerLabel.Text = "TriggerBot: " .. (TriggerBotEnabled and "ON" or "OFF")
+	print("TriggerBot:", TriggerBotEnabled)
 end)
 
---// GUI TAB
-local guiTab = makeTabFrame()
-tabFrames["GUI"] = guiTab
-
-local function createGuiButton(text, callback)
-	local btn = Instance.new("TextButton", guiTab)
-	btn.Size = UDim2.new(0, 470, 0, 35)
-	btn.Position = UDim2.new(0, 10, 0, (#guiTab:GetChildren() - 1) * 40 + 10)
-	btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-	btn.TextColor3 = Color3.new(1, 1, 1)
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 14
-	btn.Text = text
-	btn.MouseButton1Click:Connect(callback)
-end
-
-createGuiButton("Set Weather: Sunny", function()
+-- GUI TAB
+createButton("Set Weather: Sunny", tabs.GUI, function()
 	Lighting.TimeOfDay = "14:00:00"
 	Lighting.FogEnd = 100000
 	Lighting.Brightness = 2
+	Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
 end)
 
-createGuiButton("Set Weather: Foggy", function()
-	Lighting.FogEnd = 50
+createButton("Set Weather: Foggy", tabs.GUI, function()
+	Lighting.FogEnd = 150
+	Lighting.OutdoorAmbient = Color3.fromRGB(80, 80, 80)
+	Lighting.Brightness = 1
 end)
 
-createGuiButton("Set Weather: Dark", function()
+createButton("Set Weather: Dark", tabs.GUI, function()
 	Lighting.TimeOfDay = "00:00:00"
+	Lighting.FogEnd = 500
+	Lighting.Brightness = 0.3
+	Lighting.OutdoorAmbient = Color3.fromRGB(0, 0, 0)
 end)
 
---// TAB TOGGLE BEHAVIOR
-local tabs = {
-	Main = createTab("Main"),
-	Aimbot = createTab("Aimbot"),
-	GUI = createTab("GUI")
-}
-
-for name, btn in pairs(tabs) do
-	btn.MouseButton1Click:Connect(function()
-		clearTabs()
-		tabFrames[name].Visible = true
-	end)
-end
-
-tabFrames["Main"].Visible = true
-
---// TRIGGERBOT + KILL CONFIRM
-local function onPlayerDied(player)
-	if KillConfirmed then return end
-	KillConfirmed = true
-	print("Kill Confirmed: " .. player.Name)
-	task.delay(2.5, function()
-		KillConfirmed = false
-	end)
-end
-
+-- INF STAMINA + GODMODE LOOP
 RunService.RenderStepped:Connect(function()
-	-- TriggerBot
-	if TriggerBotEnabled then
+	if InfiniteStamina and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stamina") then
+		LocalPlayer.Character.Stamina.Value = 100
+	end
+	if GodmodeEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+		LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.MaxHealth
+	end
+end)
+
+-- Aimbot Lock
+RunService.RenderStepped:Connect(function()
+	if CameraAimbot then
+		local closest = nil
+		local dist = math.huge
 		for _, p in ipairs(Players:GetPlayers()) do
-			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(AimPart) then
-				local part = p.Character[AimPart]
-				local mousePos = UIS:GetMouseLocation()
-				local screenPoint, onScreen = Camera:WorldToViewportPoint(part.Position)
-				local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
-				if onScreen and distance < 50 then
-					VirtualInput:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, true, game, 0)
-					VirtualInput:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, false, game, 0)
-					if p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health <= 0 then
-						onPlayerDied(p)
+			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("UpperTorso") then
+				local pos, onScreen = Camera:WorldToViewportPoint(p.Character.UpperTorso.Position)
+				if onScreen then
+					local d = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
+					if d < dist then
+						dist = d
+						closest = p
 					end
 				end
 			end
 		end
-	end
-
-	-- Aimbot
-	if CameraAimbot then
-		local closest, dist = nil, math.huge
-		for _, p in ipairs(Players:GetPlayers()) do
-			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("UpperTorso") then
-				local pos, onScreen = Camera:WorldToViewportPoint(p.Character.UpperTorso.Position)
-				local d = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
-				if onScreen and d < dist then
-					dist = d
-					closest = p
-				end
-			end
-		end
-
-		if closest and closest.Character and closest.Character:FindFirstChild("UpperTorso") then
-			local part = closest.Character.UpperTorso
-			local dir = (part.Position - Camera.CFrame.Position).Unit
+		if closest then
+			local dir = (closest.Character.UpperTorso.Position - Camera.CFrame.Position).Unit
 			Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + dir)
-
-			local char = LocalPlayer.Character
-			if char and char:FindFirstChild("HumanoidRootPart") then
-				char.HumanoidRootPart.CFrame = CFrame.new(char.HumanoidRootPart.Position, Vector3.new(part.Position.X, char.HumanoidRootPart.Position.Y, part.Position.Z))
-			end
-		end
-	end
-
-	-- Godmode + Stamina
-	if LocalPlayer.Character then
-		if GodMode then
-			local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-			if hum then hum.Health = hum.MaxHealth end
-		end
-
-		if InfiniteStamina then
-			local values = LocalPlayer.Character:GetDescendants()
-			for _, v in pairs(values) do
-				if v.Name:lower():find("stamina") and v:IsA("NumberValue") then
-					v.Value = 100
-				end
-			end
 		end
 	end
 end)
 
--- Toggle UI
+-- UI TOGGLE
 UIS.InputBegan:Connect(function(input, gpe)
 	if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
 		gui.Enabled = not gui.Enabled
