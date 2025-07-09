@@ -1,114 +1,113 @@
--- fakemrleo v1 Script
+-- SERVICES
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local VirtualInput = game:GetService("VirtualInputManager")
-local Lighting = game:GetService("Lighting")
 
--- Core Variables
+-- VARIABLES
 local walkspeed = 20
 local TriggerBotEnabled = false
 local CameraAimbot = false
 local KillConfirmed = false
 local AimPart = "UpperTorso"
-local InfiniteStamina = false
-local GodmodeEnabled = false
 
--- GUI Setup
-local gui = Instance.new("ScreenGui", game.CoreGui)
+-- GUI SETUP
+local gui = Instance.new("ScreenGui")
 gui.Name = "fakemrleo_v1"
+gui.Enabled = true
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local tabHolder = Instance.new("Frame", gui)
-tabHolder.Size = UDim2.new(0, 550, 0, 350)
-tabHolder.Position = UDim2.new(0.5, -275, 0.5, -175)
-tabHolder.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-tabHolder.Active = true
-tabHolder.Draggable = true
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 500, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -250, 0.5, -150)
+mainFrame.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
 
--- Tab Buttons
-local tabButtons = Instance.new("Frame", tabHolder)
-tabButtons.Size = UDim2.new(0, 550, 0, 40)
-tabButtons.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+local title = Instance.new("TextLabel", mainFrame)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 22
+title.Text = "fakemrleo v1 Script"
 
-local mainTabBtn = Instance.new("TextButton", tabButtons)
-mainTabBtn.Size = UDim2.new(0, 180, 1, 0)
-mainTabBtn.Position = UDim2.new(0, 0, 0, 0)
-mainTabBtn.Text = "Main"
-mainTabBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-mainTabBtn.TextColor3 = Color3.new(1, 1, 1)
+local buttonSide = Instance.new("Frame", mainFrame)
+buttonSide.Size = UDim2.new(0, 150, 0, 260)
+buttonSide.Position = UDim2.new(0, 0, 0, 40)
+buttonSide.BackgroundColor3 = Color3.fromRGB(90, 0, 0)
 
-local aimbotTabBtn = Instance.new("TextButton", tabButtons)
-aimbotTabBtn.Size = UDim2.new(0, 180, 1, 0)
-aimbotTabBtn.Position = UDim2.new(0, 180, 0, 0)
-aimbotTabBtn.Text = "Aimbot"
-aimbotTabBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-aimbotTabBtn.TextColor3 = Color3.new(1, 1, 1)
+local layout = Instance.new("UIListLayout", buttonSide)
+layout.Padding = UDim.new(0, 5)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
 
-local guiTabBtn = Instance.new("TextButton", tabButtons)
-guiTabBtn.Size = UDim2.new(0, 190, 1, 0)
-guiTabBtn.Position = UDim2.new(0, 360, 0, 0)
-guiTabBtn.Text = "GUI"
-guiTabBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-guiTabBtn.TextColor3 = Color3.new(1, 1, 1)
+local centerPanel = Instance.new("Frame", mainFrame)
+centerPanel.Size = UDim2.new(0, 330, 0, 260)
+centerPanel.Position = UDim2.new(0, 160, 0, 40)
+centerPanel.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
 
--- Panels
-local tabs = {
-	Main = Instance.new("Frame", tabHolder),
-	Aimbot = Instance.new("Frame", tabHolder),
-	GUI = Instance.new("Frame", tabHolder)
-}
+local killLabel = Instance.new("TextLabel", centerPanel)
+killLabel.Size = UDim2.new(1, 0, 0, 25)
+killLabel.Position = UDim2.new(0, 0, 0, 0)
+killLabel.Text = "Kill Confirm: None"
+killLabel.BackgroundTransparency = 1
+killLabel.TextColor3 = Color3.new(1, 1, 1)
+killLabel.Font = Enum.Font.GothamBold
+killLabel.TextSize = 16
 
-for name, frame in pairs(tabs) do
-	frame.Size = UDim2.new(1, 0, 1, -40)
-	frame.Position = UDim2.new(0, 0, 0, 40)
-	frame.Visible = false
-	frame.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-end
+local aimbotLabel = Instance.new("TextLabel", centerPanel)
+aimbotLabel.Size = UDim2.new(1, 0, 0, 25)
+aimbotLabel.Position = UDim2.new(0, 0, 0, 25)
+aimbotLabel.Text = "Aimbot: OFF"
+aimbotLabel.BackgroundTransparency = 1
+aimbotLabel.TextColor3 = Color3.new(1, 1, 1)
+aimbotLabel.Font = Enum.Font.Gotham
+aimbotLabel.TextSize = 16
 
-tabs.Main.Visible = true
+local triggerLabel = Instance.new("TextLabel", centerPanel)
+triggerLabel.Size = UDim2.new(1, 0, 0, 25)
+triggerLabel.Position = UDim2.new(0, 0, 0, 50)
+triggerLabel.Text = "TriggerBot: OFF"
+triggerLabel.BackgroundTransparency = 1
+triggerLabel.TextColor3 = Color3.new(1, 1, 1)
+triggerLabel.Font = Enum.Font.Gotham
+triggerLabel.TextSize = 16
 
-mainTabBtn.MouseButton1Click:Connect(function()
-	tabs.Main.Visible = true
-	tabs.Aimbot.Visible = false
-	tabs.GUI.Visible = false
-end)
-aimbotTabBtn.MouseButton1Click:Connect(function()
-	tabs.Main.Visible = false
-	tabs.Aimbot.Visible = true
-	tabs.GUI.Visible = false
-end)
-guiTabBtn.MouseButton1Click:Connect(function()
-	tabs.Main.Visible = false
-	tabs.Aimbot.Visible = false
-	tabs.GUI.Visible = true
-end)
-
--- Button Maker
-local function createButton(text, parent, callback)
-	local btn = Instance.new("TextButton", parent)
-	btn.Size = UDim2.new(0, 500, 0, 35)
+-- BUTTON CREATOR
+local function createButton(text, callback)
+	local btn = Instance.new("TextButton", buttonSide)
+	btn.Size = UDim2.new(1, -10, 0, 35)
 	btn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 	btn.TextColor3 = Color3.new(1, 1, 1)
 	btn.Font = Enum.Font.GothamBold
 	btn.TextSize = 14
 	btn.Text = text
-	btn.MouseButton1Click:Connect(callback)
+	btn.MouseButton1Click:Connect(function()
+		callback(btn)
+	end)
 end
 
--- MAIN TAB
-createButton("Infinite Stamina", tabs.Main, function()
-	InfiniteStamina = not InfiniteStamina
-	print("Infinite Stamina:", InfiniteStamina)
+-- BUTTONS ADDED
+createButton("Increase Walkspeed", function()
+	walkspeed += 5
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+		LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = walkspeed
+	end
 end)
 
-createButton("Godmode", tabs.Main, function()
-	GodmodeEnabled = not GodmodeEnabled
-	print("Godmode:", GodmodeEnabled)
+createButton("Decrease Walkspeed", function()
+	walkspeed = math.max(5, walkspeed - 5)
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+		LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = walkspeed
+	end
 end)
 
-createButton("Fly (Hold F)", tabs.Main, function()
+createButton("Fly (Hold F)", function()
 	local flying = false
 	UIS.InputBegan:Connect(function(input)
 		if input.KeyCode == Enum.KeyCode.F then
@@ -130,7 +129,7 @@ createButton("Fly (Hold F)", tabs.Main, function()
 	end)
 end)
 
-createButton("Highlight Players", tabs.Main, function()
+createButton("Highlight Players", function()
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChildOfClass("Highlight") then
 			local hl = Instance.new("Highlight", p.Character)
@@ -142,7 +141,7 @@ createButton("Highlight Players", tabs.Main, function()
 	end
 end)
 
-createButton("Show Usernames", tabs.Main, function()
+createButton("Show Usernames", function()
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChild("UsernameTag") then
 			local tag = Instance.new("BillboardGui", p.Character)
@@ -161,73 +160,32 @@ createButton("Show Usernames", tabs.Main, function()
 	end
 end)
 
--- AIMBOT TAB
-createButton("Toggle Aimbot (Q)", tabs.Aimbot, function()
+createButton("Toggle Aimbot", function(btn)
 	CameraAimbot = not CameraAimbot
-	print("Aimbot:", CameraAimbot)
+	aimbotLabel.Text = "Aimbot: " .. (CameraAimbot and "ON" or "OFF")
 end)
 
-createButton("Toggle TriggerBot", tabs.Aimbot, function()
+createButton("Toggle TriggerBot", function(btn)
 	TriggerBotEnabled = not TriggerBotEnabled
-	print("TriggerBot:", TriggerBotEnabled)
+	triggerLabel.Text = "TriggerBot: " .. (TriggerBotEnabled and "ON" or "OFF")
 end)
 
--- GUI TAB
-createButton("Set Weather: Sunny", tabs.GUI, function()
-	Lighting.TimeOfDay = "14:00:00"
-	Lighting.FogEnd = 100000
-	Lighting.Brightness = 2
-	Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-end)
-
-createButton("Set Weather: Foggy", tabs.GUI, function()
-	Lighting.FogEnd = 150
-	Lighting.OutdoorAmbient = Color3.fromRGB(80, 80, 80)
-	Lighting.Brightness = 1
-end)
-
-createButton("Set Weather: Dark", tabs.GUI, function()
-	Lighting.TimeOfDay = "00:00:00"
-	Lighting.FogEnd = 500
-	Lighting.Brightness = 0.3
-	Lighting.OutdoorAmbient = Color3.fromRGB(0, 0, 0)
-end)
-
--- INF STAMINA + GODMODE LOOP
-RunService.RenderStepped:Connect(function()
-	if InfiniteStamina and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Stamina") then
-		LocalPlayer.Character.Stamina.Value = 100
-	end
-	if GodmodeEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-		LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.MaxHealth
-	end
-end)
-
--- Aimbot Lock
-RunService.RenderStepped:Connect(function()
-	if CameraAimbot then
-		local closest = nil
-		local dist = math.huge
-		for _, p in ipairs(Players:GetPlayers()) do
-			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("UpperTorso") then
-				local pos, onScreen = Camera:WorldToViewportPoint(p.Character.UpperTorso.Position)
-				if onScreen then
-					local d = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
-					if d < dist then
-						dist = d
-						closest = p
-					end
-				end
+-- NEW BUTTON ➕ ENABLE GODMODE
+createButton("Enable Godmode", function()
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+		local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		hum.Name = "GodHumanoid"
+		hum.MaxHealth = math.huge
+		hum.Health = math.huge
+		hum:GetPropertyChangedSignal("Health"):Connect(function()
+			if hum.Health < hum.MaxHealth then
+				hum.Health = hum.MaxHealth
 			end
-		end
-		if closest then
-			local dir = (closest.Character.UpperTorso.Position - Camera.CFrame.Position).Unit
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + dir)
-		end
+		end)
 	end
 end)
 
--- UI TOGGLE
+-- TOGGLE UI
 UIS.InputBegan:Connect(function(input, gpe)
 	if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
 		gui.Enabled = not gui.Enabled
