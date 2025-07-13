@@ -1,193 +1,181 @@
--- SERVICES
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local UIS = game:GetService("UserInputService")
+local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+
+local Window = Library:CreateWindow({
+    Title = 'fakemrleo UI - SLR & Dupe Tools',
+    Center = true,
+    AutoShow = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2
+})
+
+local Tabs = {
+    Main = Window:AddTab('Main'),
+    Aimbot = Window:AddTab('Aimbot'),
+    Dupe = Window:AddTab('Dupe'),
+    ['UI Settings'] = Window:AddTab('UI Settings')
+}
+
+local Local = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-local VirtualInput = game:GetService("VirtualInputManager")
+local UIS = game:GetService("UserInputService")
 
--- VARIABLES
-local walkspeed = 20
-local TriggerBotEnabled = false
-local CameraAimbot = false
-local KillConfirmed = false
-local AimPart = "UpperTorso"
+-- 🧠 Main Tab
+local MainBox = Tabs.Main:AddLeftGroupbox('Main Features')
 
--- GUI SETUP
-local gui = Instance.new("ScreenGui")
-gui.Name = "fakemrleo_v1"
-gui.Enabled = true
-gui.ResetOnSpawn = false
-gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+MainBox:AddToggle('InfiniteStamina', {
+    Text = 'Infinite Stamina',
+    Default = false,
+    Callback = function(val)
+        if val then
+            RunService.RenderStepped:Connect(function()
+                local char = Local.Character
+                if char then
+                    for _, v in pairs(char:GetDescendants()) do
+                        if v:IsA("NumberValue") and string.find(string.lower(v.Name), "stamina") then
+                            v.Value = v.MaxValue or 100
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
 
-local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.new(0, 500, 0, 300)
-mainFrame.Position = UDim2.new(0.5, -250, 0.5, -150)
-mainFrame.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
-mainFrame.Draggable = true
+MainBox:AddSlider('WalkSpeed', {
+    Text = 'WalkSpeed',
+    Default = 16,
+    Min = 5,
+    Max = 100,
+    Suffix = 'Speed',
+    Callback = function(v)
+        local hum = Local.Character and Local.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = v end
+    end
+})
 
-local title = Instance.new("TextLabel", mainFrame)
-title.Size = UDim2.new(1, 0, 0, 40)
-title.Position = UDim2.new(0, 0, 0, 0)
-title.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-title.TextColor3 = Color3.new(1, 1, 1)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 22
-title.Text = "fakemrleo v1 Script"
+MainBox:AddToggle('FlyToggle', {
+    Text = 'Fly (Hold F)',
+    Default = false,
+    Callback = function(val)
+        if val then
+            local flying = false
+            UIS.InputBegan:Connect(function(i, e)
+                if not e and i.KeyCode == Enum.KeyCode.F then flying = true end
+            end)
+            UIS.InputEnded:Connect(function(i, e)
+                if i.KeyCode == Enum.KeyCode.F then flying = false end
+            end)
+            RunService.RenderStepped:Connect(function()
+                if flying and Local.Character and Local.Character:FindFirstChild("HumanoidRootPart") then
+                    Local.Character.HumanoidRootPart.Velocity = workspace.CurrentCamera.CFrame.LookVector * 60
+                end
+            end)
+        end
+    end
+})
 
-local buttonSide = Instance.new("Frame", mainFrame)
-buttonSide.Size = UDim2.new(0, 150, 0, 260)
-buttonSide.Position = UDim2.new(0, 0, 0, 40)
-buttonSide.BackgroundColor3 = Color3.fromRGB(90, 0, 0)
+MainBox:AddButton('ShowUsernames', {
+    Text = 'Show Usernames',
+    Func = function()
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= Local and p.Character and not p.Character:FindFirstChild("NameTagGui") then
+                local tag = Instance.new("BillboardGui", p.Character)
+                tag.Name = "NameTagGui"
+                tag.Size = UDim2.new(0,100,0,50)
+                tag.StudsOffset = Vector3.new(0,3,0)
+                tag.AlwaysOnTop = true
+                local lbl = Instance.new("TextLabel", tag)
+                lbl.Size = UDim2.new(1,0,1,0)
+                lbl.Text = p.Name
+                lbl.Font = Enum.Font.GothamBold
+                lbl.TextColor3 = Color3.new(1,1,1)
+                lbl.BackgroundTransparency = 1
+            end
+        end
+    end
+})
 
-local layout = Instance.new("UIListLayout", buttonSide)
-layout.Padding = UDim.new(0, 5)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
+-- 🎯 Aimbot Tab
+local AimbotBox = Tabs.Aimbot:AddLeftGroupbox('Aimbot Tools')
 
-local centerPanel = Instance.new("Frame", mainFrame)
-centerPanel.Size = UDim2.new(0, 330, 0, 260)
-centerPanel.Position = UDim2.new(0, 160, 0, 40)
-centerPanel.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+AimbotBox:AddToggle('EnableAimbot', {
+    Text = 'Enable Aimbot',
+    Default = false,
+    Callback = function(enabled)
+        if enabled then
+            RunService.RenderStepped:Connect(function()
+                local closest, dist = nil, math.huge
+                for _, p in pairs(game.Players:GetPlayers()) do
+                    if p ~= Local and p.Character then
+                        local part = p.Character:FindFirstChild("UpperTorso")
+                        if part then
+                            local sp = workspace.CurrentCamera:WorldToViewportPoint(part.Position)
+                            local md = (Vector2.new(sp.X, sp.Y) - UIS:GetMouseLocation()).Magnitude
+                            if md < dist then dist, closest = md, p end
+                        end
+                    end
+                end
+                if closest and closest.Character then
+                    local pos = closest.Character.UpperTorso.Position
+                    workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, pos)
+                end
+            end)
+        end
+    end
+})
 
-local killLabel = Instance.new("TextLabel", centerPanel)
-killLabel.Size = UDim2.new(1, 0, 0, 25)
-killLabel.Position = UDim2.new(0, 0, 0, 0)
-killLabel.Text = "Kill Confirm: None"
-killLabel.BackgroundTransparency = 1
-killLabel.TextColor3 = Color3.new(1, 1, 1)
-killLabel.Font = Enum.Font.GothamBold
-killLabel.TextSize = 16
+AimbotBox:AddToggle('TriggerBot', {
+    Text = 'Trigger Bot',
+    Default = false,
+    Callback = function(val)
+        if val then
+            RunService.RenderStepped:Connect(function()
+                -- Add shooting logic here if game has tools
+            end)
+        end
+    end
+})
 
-local aimbotLabel = Instance.new("TextLabel", centerPanel)
-aimbotLabel.Size = UDim2.new(1, 0, 0, 25)
-aimbotLabel.Position = UDim2.new(0, 0, 0, 25)
-aimbotLabel.Text = "Aimbot: OFF"
-aimbotLabel.BackgroundTransparency = 1
-aimbotLabel.TextColor3 = Color3.new(1, 1, 1)
-aimbotLabel.Font = Enum.Font.Gotham
-aimbotLabel.TextSize = 16
+AimbotBox:AddButton('HighlightPlayers', {
+    Text = 'Highlight Players',
+    Func = function()
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= Local and p.Character and not p.Character:FindFirstChildOfClass("Highlight") then
+                local hl = Instance.new("Highlight", p.Character)
+                hl.FillColor = Color3.fromRGB(255, 0, 0)
+                hl.OutlineColor = Color3.new(1, 1, 1)
+                hl.FillTransparency = 0.25
+            end
+        end
+    end
+})
 
-local triggerLabel = Instance.new("TextLabel", centerPanel)
-triggerLabel.Size = UDim2.new(1, 0, 0, 25)
-triggerLabel.Position = UDim2.new(0, 0, 0, 50)
-triggerLabel.Text = "TriggerBot: OFF"
-triggerLabel.BackgroundTransparency = 1
-triggerLabel.TextColor3 = Color3.new(1, 1, 1)
-triggerLabel.Font = Enum.Font.Gotham
-triggerLabel.TextSize = 16
+-- 📦 Dupe Tab
+local DupeBox = Tabs.Dupe:AddLeftGroupbox('Dupe Tools')
 
--- BUTTON CREATOR
-local function createButton(text, callback)
-	local btn = Instance.new("TextButton", buttonSide)
-	btn.Size = UDim2.new(1, -10, 0, 35)
-	btn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-	btn.TextColor3 = Color3.new(1, 1, 1)
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 14
-	btn.Text = text
-	btn.MouseButton1Click:Connect(function()
-		callback(btn)
-	end)
-end
+DupeBox:AddButton('AttemptDupe', {
+    Text = 'Attempt Dupe',
+    Func = function()
+        local rs = game:GetService("ReplicatedStorage")
+        local evt = rs:FindFirstChild("DupeEvent") or rs:FindFirstChild("Duplicate")
+        if evt and evt:IsA("RemoteEvent") then
+            evt:FireServer()
+        else
+            warn("No dupe event found.")
+        end
+    end
+})
 
--- BUTTONS ADDED
-createButton("Increase Walkspeed", function()
-	walkspeed += 5
-	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-		LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = walkspeed
-	end
-end)
+-- 🎨 Theme & Save
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+SaveManager:SetFolder('fakemrleoSLR')
+SaveManager:BuildConfigSection(Tabs['UI Settings'])
+ThemeManager:ApplyTheme('Default')
 
-createButton("Decrease Walkspeed", function()
-	walkspeed = math.max(5, walkspeed - 5)
-	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-		LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = walkspeed
-	end
-end)
-
-createButton("Fly (Hold F)", function()
-	local flying = false
-	UIS.InputBegan:Connect(function(input)
-		if input.KeyCode == Enum.KeyCode.F then
-			flying = true
-			while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("UpperTorso") do
-				LocalPlayer.Character.Humanoid.Sit = true
-				LocalPlayer.Character.UpperTorso.Velocity = Camera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
-				task.wait()
-			end
-		end
-	end)
-	UIS.InputEnded:Connect(function(input)
-		if input.KeyCode == Enum.KeyCode.F then
-			flying = false
-			if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-				LocalPlayer.Character.Humanoid.Sit = false
-			end
-		end
-	end)
-end)
-
-createButton("Highlight Players", function()
-	for _, p in pairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChildOfClass("Highlight") then
-			local hl = Instance.new("Highlight", p.Character)
-			hl.FillColor = Color3.fromRGB(255, 0, 0)
-			hl.OutlineColor = Color3.new(1, 1, 1)
-			hl.FillTransparency = 0.25
-			hl.OutlineTransparency = 0
-		end
-	end
-end)
-
-createButton("Show Usernames", function()
-	for _, p in pairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChild("UsernameTag") then
-			local tag = Instance.new("BillboardGui", p.Character)
-			tag.Name = "UsernameTag"
-			tag.Size = UDim2.new(0, 200, 0, 50)
-			tag.AlwaysOnTop = true
-			tag.StudsOffset = Vector3.new(0, 3, 0)
-			local label = Instance.new("TextLabel", tag)
-			label.Size = UDim2.new(1, 0, 1, 0)
-			label.Text = p.Name
-			label.TextColor3 = Color3.new(1, 1, 1)
-			label.BackgroundTransparency = 1
-			label.Font = Enum.Font.GothamBold
-			label.TextSize = 14
-		end
-	end
-end)
-
-createButton("Toggle Aimbot", function(btn)
-	CameraAimbot = not CameraAimbot
-	aimbotLabel.Text = "Aimbot: " .. (CameraAimbot and "ON" or "OFF")
-end)
-
-createButton("Toggle TriggerBot", function(btn)
-	TriggerBotEnabled = not TriggerBotEnabled
-	triggerLabel.Text = "TriggerBot: " .. (TriggerBotEnabled and "ON" or "OFF")
-end)
-
--- NEW BUTTON ➕ ENABLE GODMODE
-createButton("Enable Godmode", function()
-	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-		local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-		hum.Name = "GodHumanoid"
-		hum.MaxHealth = math.huge
-		hum.Health = math.huge
-		hum:GetPropertyChangedSignal("Health"):Connect(function()
-			if hum.Health < hum.MaxHealth then
-				hum.Health = hum.MaxHealth
-			end
-		end)
-	end
-end)
-
--- TOGGLE UI
-UIS.InputBegan:Connect(function(input, gpe)
-	if input.KeyCode == Enum.KeyCode.RightShift and not gpe then
-		gui.Enabled = not gui.Enabled
-	end
-end)
+Library:Notify('Linoria UI Loaded', 3)
