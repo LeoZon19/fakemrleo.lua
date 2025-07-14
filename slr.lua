@@ -1,168 +1,173 @@
---// Simbot SXRIOT Full Build - SCRIPT
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/lnfiniteb0rn/linoria/main/library.lua"))()
-local Window = Library:CreateWindow("script", Vector2.new(520, 620), Enum.KeyCode.RightControl)
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local MainTab = Window:AddTab("Main")
-local AimbotTab = Window:AddTab("Aimbot")
-local DupeTab = Window:AddTab("Dupe")
+local Window = Rayfield:CreateWindow({
+	Name = "fakemrleo SLR Script",
+	LoadingTitle = "Loading fakemrleo SLR Script",
+	LoadingSubtitle = "by Leonard",
+	ConfigurationSaving = {
+		Enabled = false,
+		FolderName = nil,
+		FileName = "fakemrleoSLR"
+	},
+	KeySystem = false
+})
 
---// Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-
---// Walkspeed Slider
-local walkSpeed = 16
-MainTab:AddSlider("Walkspeed", {
-    min = 16;
-    max = 100;
-    default = 16;
-    text = "Walkspeed";
-    callback = function(val)
-        walkSpeed = val
-        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum.WalkSpeed = val end
-    end;
-})
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    repeat task.wait() until char:FindFirstChildOfClass("Humanoid")
-    char:FindFirstChildOfClass("Humanoid").WalkSpeed = walkSpeed
-end)
-
---// Infinite Stamina Toggle
-local staminaLocked = false
-MainTab:AddToggle("Infinite Stamina", {default = false}, function(state)
-    staminaLocked = state
-    local function maintainStamina()
-        for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("NumberValue") and v.Name:lower():find("stamina") then
-                v.Value = 100
-                v:GetPropertyChangedSignal("Value"):Connect(function()
-                    if staminaLocked then v.Value = 100 end
-                end)
-            end
-        end
-    end
-    maintainStamina()
-    LocalPlayer.CharacterAdded:Connect(function()
-        task.wait(1)
-        maintainStamina()
-    end)
-end)
-
---// Show Usernames Button
-MainTab:AddButton("Show Usernames", function()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChild("UsernameTag") then
-            local tag = Instance.new("BillboardGui", p.Character)
-            tag.Name = "UsernameTag"
-            tag.Size = UDim2.new(0, 200, 0, 50)
-            tag.AlwaysOnTop = true
-            tag.StudsOffset = Vector3.new(0, 3, 0)
-            local label = Instance.new("TextLabel", tag)
-            label.Size = UDim2.new(1, 0, 1, 0)
-            label.Text = p.Name
-            label.TextColor3 = Color3.new(1, 1, 1)
-            label.BackgroundTransparency = 1
-            label.Font = Enum.Font.GothamBold
-            label.TextSize = 14
-        end
-    end
-end)
-
---// Aimbot Logic
-local AimbotEnabled = false
 local TriggerBotEnabled = false
-local AimbotFOV = 100
-local AimbotTargetPart = "Head"
+local AimbotEnabled = false
 
-local function getClosest()
-    local closest, shortest = nil, AimbotFOV
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(AimbotTargetPart) then
-            local part = player.Character[AimbotTargetPart]
-            local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
-            if onScreen then
-                local dist = (Vector2.new(screenPos.X, screenPos.Y) - UIS:GetMouseLocation()).Magnitude
-                if dist < shortest then
-                    shortest = dist
-                    closest = part
-                end
-            end
-        end
-    end
-    return closest
+-- Functions
+
+local function InfiniteStamina()
+	local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	local stats = char:FindFirstChild("BodyEffects")
+	if stats and stats:FindFirstChild("Stamina") then
+		stats.Stamina.Changed:Connect(function()
+			stats.Stamina.Value = 100
+		end)
+		stats.Stamina.Value = 100
+	end
 end
 
-RunService.RenderStepped:Connect(function()
-    if AimbotEnabled then
-        local target = getClosest()
-        if target then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
-        end
-    end
-    if TriggerBotEnabled then
-        local target = getClosest()
-        if target then
-            local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
-            if tool and tool:FindFirstChild("Activate") then
-                tool:Activate()
-            end
-        end
-    end
-end)
+local function FlyToggle()
+	local flying = false
+	local hrp = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+	UIS.InputBegan:Connect(function(key, gpe)
+		if key.KeyCode == Enum.KeyCode.F and not gpe then
+			flying = true
+			while flying do
+				hrp.Velocity = Camera.CFrame.LookVector * 100
+				RunService.RenderStepped:Wait()
+			end
+		end
+	end)
+	UIS.InputEnded:Connect(function(key)
+		if key.KeyCode == Enum.KeyCode.F then
+			flying = false
+		end
+	end)
+end
 
---// Aimbot Controls
-AimbotTab:AddToggle("Enable Aimbot", {default = false}, function(state)
-    AimbotEnabled = state
-end)
+local function ShowUsernames()
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and not player.Character:FindFirstChild("NameTag") then
+			local tag = Instance.new("BillboardGui", player.Character)
+			tag.Name = "NameTag"
+			tag.Size = UDim2.new(0, 200, 0, 50)
+			tag.StudsOffset = Vector3.new(0, 3, 0)
+			tag.AlwaysOnTop = true
+			local name = Instance.new("TextLabel", tag)
+			name.Size = UDim2.new(1, 0, 1, 0)
+			name.BackgroundTransparency = 1
+			name.Text = player.Name
+			name.TextColor3 = Color3.new(1, 1, 1)
+			name.TextScaled = true
+		end
+	end
+end
 
-AimbotTab:AddToggle("Enable Trigger Bot", {default = false}, function(state)
-    TriggerBotEnabled = state
-end)
+local function HighlightPlayers()
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChildOfClass("Highlight") then
+			local hl = Instance.new("Highlight", p.Character)
+			hl.FillColor = Color3.fromRGB(255, 0, 0)
+			hl.OutlineColor = Color3.new(1, 1, 1)
+			hl.FillTransparency = 0.25
+			hl.OutlineTransparency = 0
+		end
+	end
+end
 
-AimbotTab:AddSlider("Aimbot FOV", {
-    min = 50;
-    max = 300;
-    default = 100;
-    text = "FOV Range";
-    callback = function(val)
-        AimbotFOV = val
-    end;
+local function RunAimbot()
+	RunService.RenderStepped:Connect(function()
+		if not AimbotEnabled then return end
+		local closest = nil
+		local shortest = math.huge
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("UpperTorso") then
+				local pos = Camera:WorldToViewportPoint(player.Character.UpperTorso.Position)
+				local mag = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
+				if mag < shortest then
+					shortest = mag
+					closest = player
+				end
+			end
+		end
+		if closest and closest.Character and closest.Character:FindFirstChild("UpperTorso") then
+			Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Character.UpperTorso.Position)
+		end
+	end)
+end
+
+local function RunTriggerBot()
+	RunService.RenderStepped:Connect(function()
+		if not TriggerBotEnabled then return end
+		local mouse = LocalPlayer:GetMouse()
+		local target = mouse.Target
+		if target and target.Parent:FindFirstChild("Humanoid") then
+			mouse1click()
+		end
+	end)
+end
+
+-- MAIN TAB
+local MainTab = Window:CreateTab("Main", 4483362458)
+
+MainTab:CreateSlider({
+	Name = "Walkspeed",
+	Range = {16, 100},
+	Increment = 1,
+	Default = 16,
+	Callback = function(Value)
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+			LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = Value
+		end
+	end,
 })
 
-AimbotTab:AddDropdown("Target Part", {"Head", "Torso", "UpperTorso"}, function(part)
-    AimbotTargetPart = part
-end)
+MainTab:CreateButton({
+	Name = "Enable Infinite Stamina",
+	Callback = InfiniteStamina,
+})
 
-AimbotTab:AddButton("Highlight Players", function()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChildOfClass("Highlight") then
-            local hl = Instance.new("Highlight", p.Character)
-            hl.FillColor = Color3.fromRGB(255, 0, 0)
-            hl.OutlineColor = Color3.new(1, 1, 1)
-            hl.FillTransparency = 0.25
-            hl.OutlineTransparency = 0
-        end
-    end
-end)
+MainTab:CreateButton({
+	Name = "Fly (Hold F)",
+	Callback = FlyToggle,
+})
 
---// Dupe System
-DupeTab:AddButton("Dupe Backpack Items", function()
-    local bp = LocalPlayer:FindFirstChild("Backpack")
-    if bp then
-        for _, item in ipairs(bp:GetChildren()) do
-            local clone = item:Clone()
-            clone.Parent = bp
-        end
-        Library:Notify("Items duplicated!", 3)
-    else
-        Library:Notify("Backpack missing", 3)
-    end
-end)
+MainTab:CreateButton({
+	Name = "Show Usernames",
+	Callback = ShowUsernames,
+})
 
---// Final Notification
-Library:Notify("Loaded script UI with full utilities ⚙️", 3)
+-- AIMBOT TAB
+local AimbotTab = Window:CreateTab("Aimbot", 4483362458)
+
+AimbotTab:CreateToggle({
+	Name = "Enable Aimbot",
+	CurrentValue = false,
+	Callback = function(Value)
+		AimbotEnabled = Value
+	end,
+})
+
+AimbotTab:CreateToggle({
+	Name = "Enable TriggerBot",
+	CurrentValue = false,
+	Callback = function(Value)
+		TriggerBotEnabled = Value
+	end,
+})
+
+AimbotTab:CreateButton({
+	Name = "Highlight Players",
+	Callback = HighlightPlayers,
+})
+
+-- Start logic loops
+RunAimbot()
+RunTriggerBot()
