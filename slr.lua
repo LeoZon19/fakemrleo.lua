@@ -1,173 +1,181 @@
+--// Rayfield Loader
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
 	Name = "fakemrleo SLR Script",
-	LoadingTitle = "Loading fakemrleo SLR Script",
-	LoadingSubtitle = "by Leonard",
+	LoadingTitle = "Loading fakemrleo's UI",
+	LoadingSubtitle = "by ChatGPT",
 	ConfigurationSaving = {
-		Enabled = false,
-		FolderName = nil,
-		FileName = "fakemrleoSLR"
+		Enabled = false
 	},
-	KeySystem = false
+	KeySystem = false,
 })
 
+-- Variables
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local TriggerBotEnabled = false
-local AimbotEnabled = false
+local staminaLoop, godLoop, flying = false, false, false
+local walkspeed = 16
 
--- Functions
-
-local function InfiniteStamina()
-	local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-	local stats = char:FindFirstChild("BodyEffects")
-	if stats and stats:FindFirstChild("Stamina") then
-		stats.Stamina.Changed:Connect(function()
-			stats.Stamina.Value = 100
-		end)
-		stats.Stamina.Value = 100
-	end
-end
-
-local function FlyToggle()
-	local flying = false
-	local hrp = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
-	UIS.InputBegan:Connect(function(key, gpe)
-		if key.KeyCode == Enum.KeyCode.F and not gpe then
-			flying = true
-			while flying do
-				hrp.Velocity = Camera.CFrame.LookVector * 100
-				RunService.RenderStepped:Wait()
-			end
-		end
-	end)
-	UIS.InputEnded:Connect(function(key)
-		if key.KeyCode == Enum.KeyCode.F then
-			flying = false
-		end
-	end)
-end
-
-local function ShowUsernames()
-	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Character and not player.Character:FindFirstChild("NameTag") then
-			local tag = Instance.new("BillboardGui", player.Character)
-			tag.Name = "NameTag"
-			tag.Size = UDim2.new(0, 200, 0, 50)
-			tag.StudsOffset = Vector3.new(0, 3, 0)
-			tag.AlwaysOnTop = true
-			local name = Instance.new("TextLabel", tag)
-			name.Size = UDim2.new(1, 0, 1, 0)
-			name.BackgroundTransparency = 1
-			name.Text = player.Name
-			name.TextColor3 = Color3.new(1, 1, 1)
-			name.TextScaled = true
-		end
-	end
-end
-
-local function HighlightPlayers()
-	for _, p in pairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChildOfClass("Highlight") then
-			local hl = Instance.new("Highlight", p.Character)
-			hl.FillColor = Color3.fromRGB(255, 0, 0)
-			hl.OutlineColor = Color3.new(1, 1, 1)
-			hl.FillTransparency = 0.25
-			hl.OutlineTransparency = 0
-		end
-	end
-end
-
-local function RunAimbot()
-	RunService.RenderStepped:Connect(function()
-		if not AimbotEnabled then return end
-		local closest = nil
-		local shortest = math.huge
-		for _, player in ipairs(Players:GetPlayers()) do
-			if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("UpperTorso") then
-				local pos = Camera:WorldToViewportPoint(player.Character.UpperTorso.Position)
-				local mag = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
-				if mag < shortest then
-					shortest = mag
-					closest = player
-				end
-			end
-		end
-		if closest and closest.Character and closest.Character:FindFirstChild("UpperTorso") then
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Character.UpperTorso.Position)
-		end
-	end)
-end
-
-local function RunTriggerBot()
-	RunService.RenderStepped:Connect(function()
-		if not TriggerBotEnabled then return end
-		local mouse = LocalPlayer:GetMouse()
-		local target = mouse.Target
-		if target and target.Parent:FindFirstChild("Humanoid") then
-			mouse1click()
-		end
-	end)
-end
-
--- MAIN TAB
+-- Main Tab
 local MainTab = Window:CreateTab("Main", 4483362458)
 
 MainTab:CreateSlider({
 	Name = "Walkspeed",
 	Range = {16, 100},
-	Increment = 1,
-	Default = 16,
+	Increment = 2,
+	CurrentValue = 16,
+	Flag = "WalkspeedSlider",
 	Callback = function(Value)
-		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-			LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = Value
+		walkspeed = Value
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+			LocalPlayer.Character.Humanoid.WalkSpeed = walkspeed
+		end
+	end,
+})
+
+MainTab:CreateToggle({
+	Name = "Infinite Stamina",
+	CurrentValue = false,
+	Callback = function(state)
+		staminaLoop = state
+		while staminaLoop do
+			local stat = LocalPlayer:FindFirstChild("Values") or LocalPlayer:FindFirstChild("stats")
+			if stat and stat:FindFirstChild("Stamina") then
+				stat.Stamina.Value = 100
+			end
+			task.wait(0.1)
 		end
 	end,
 })
 
 MainTab:CreateButton({
-	Name = "Enable Infinite Stamina",
-	Callback = InfiniteStamina,
-})
-
-MainTab:CreateButton({
 	Name = "Fly (Hold F)",
-	Callback = FlyToggle,
+	Callback = function()
+		UIS.InputBegan:Connect(function(input)
+			if input.KeyCode == Enum.KeyCode.F then
+				flying = true
+				while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+					LocalPlayer.Character.HumanoidRootPart.Velocity = Camera.CFrame.LookVector * 60
+					task.wait()
+				end
+			end
+		end)
+		UIS.InputEnded:Connect(function(input)
+			if input.KeyCode == Enum.KeyCode.F then
+				flying = false
+			end
+		end)
+	end,
 })
 
 MainTab:CreateButton({
 	Name = "Show Usernames",
-	Callback = ShowUsernames,
+	Callback = function()
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr ~= LocalPlayer and plr.Character and not plr.Character:FindFirstChild("UsernameBillboard") then
+				local tag = Instance.new("BillboardGui", plr.Character)
+				tag.Name = "UsernameBillboard"
+				tag.Size = UDim2.new(0, 200, 0, 50)
+				tag.StudsOffset = Vector3.new(0, 3, 0)
+				tag.AlwaysOnTop = true
+				local txt = Instance.new("TextLabel", tag)
+				txt.Size = UDim2.new(1, 0, 1, 0)
+				txt.Text = plr.Name
+				txt.BackgroundTransparency = 1
+				txt.TextColor3 = Color3.new(1,1,1)
+				txt.Font = Enum.Font.GothamBold
+				txt.TextSize = 14
+			end
+		end
+	end,
 })
 
--- AIMBOT TAB
+MainTab:CreateButton({
+	Name = "Highlight Players",
+	Callback = function()
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr ~= LocalPlayer and plr.Character and not plr.Character:FindFirstChild("Highlight") then
+				local hl = Instance.new("Highlight", plr.Character)
+				hl.FillColor = Color3.new(1, 0, 0)
+				hl.OutlineColor = Color3.new(1, 1, 1)
+				hl.FillTransparency = 0.25
+				hl.OutlineTransparency = 0
+			end
+		end
+	end,
+})
+
+-- Aimbot Tab
 local AimbotTab = Window:CreateTab("Aimbot", 4483362458)
 
 AimbotTab:CreateToggle({
-	Name = "Enable Aimbot",
+	Name = "TriggerBot",
 	CurrentValue = false,
-	Callback = function(Value)
-		AimbotEnabled = Value
+	Callback = function(enabled)
+		getgenv().TriggerBot = enabled
+		while getgenv().TriggerBot do
+			local mouse = LocalPlayer:GetMouse()
+			local target = mouse.Target
+			if target and target.Parent and Players:GetPlayerFromCharacter(target.Parent) then
+				mouse1click()
+			end
+			task.wait()
+		end
 	end,
 })
 
 AimbotTab:CreateToggle({
-	Name = "Enable TriggerBot",
+	Name = "Enable Aimbot (head)",
 	CurrentValue = false,
-	Callback = function(Value)
-		TriggerBotEnabled = Value
+	Callback = function(state)
+		getgenv().AimbotOn = state
+		local RunService = game:GetService("RunService")
+		local function getClosestPlayer()
+			local closestPlayer = nil
+			local shortestDistance = math.huge
+			for _, player in ipairs(Players:GetPlayers()) do
+				if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+					local screenPoint, onScreen = Camera:WorldToViewportPoint(player.Character.Head.Position)
+					if onScreen then
+						local mousePos = UIS:GetMouseLocation()
+						local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - mousePos).Magnitude
+						if dist < shortestDistance then
+							closestPlayer = player
+							shortestDistance = dist
+						end
+					end
+				end
+			end
+			return closestPlayer
+		end
+		RunService:BindToRenderStep("Aimbot", Enum.RenderPriority.Camera.Value + 1, function()
+			if getgenv().AimbotOn then
+				local target = getClosestPlayer()
+				if target and target.Character and target.Character:FindFirstChild("Head") then
+					Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+				end
+			end
+		end)
 	end,
 })
 
-AimbotTab:CreateButton({
-	Name = "Highlight Players",
-	Callback = HighlightPlayers,
+-- Godmode
+MainTab:CreateButton({
+	Name = "Enable Godmode",
+	Callback = function()
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+			local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+			hum.Name = "GodHumanoid"
+			hum.MaxHealth = math.huge
+			hum.Health = math.huge
+			hum:GetPropertyChangedSignal("Health"):Connect(function()
+				if hum.Health < hum.MaxHealth then
+					hum.Health = hum.MaxHealth
+				end
+			end)
+		end
+	end,
 })
-
--- Start logic loops
-RunAimbot()
-RunTriggerBot()
