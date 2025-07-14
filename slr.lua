@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
 	Name = "fakemrleo SLR Script",
-	LoadingTitle = "fakemrleo UI",
-	LoadingSubtitle = "powered by ChatGPT",
+	LoadingTitle = "Loading...",
+	LoadingSubtitle = "Thank you guys",
 	ConfigurationSaving = {
 		Enabled = false
 	},
