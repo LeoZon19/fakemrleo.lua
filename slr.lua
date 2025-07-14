@@ -1,70 +1,59 @@
--- // Load Linoria Library
+--// Simbot SXRIOT Full Build - SCRIPT
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/lnfiniteb0rn/linoria/main/library.lua"))()
-local Window = Library:CreateWindow("fakemrleo SLR v1", Vector2.new(500, 600), Enum.KeyCode.RightControl)
+local Window = Library:CreateWindow("script", Vector2.new(520, 620), Enum.KeyCode.RightControl)
 
--- // Tabs
 local MainTab = Window:AddTab("Main")
 local AimbotTab = Window:AddTab("Aimbot")
 local DupeTab = Window:AddTab("Dupe")
 
+--// Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
--- // Main Tab Functions
+--// Walkspeed Slider
+local walkSpeed = 16
 MainTab:AddSlider("Walkspeed", {
     min = 16;
     max = 100;
     default = 16;
     text = "Walkspeed";
-    callback = function(value)
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = value
-        end
+    callback = function(val)
+        walkSpeed = val
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = val end
     end;
 })
 
-MainTab:AddButton("Infinite Stamina", function()
-    local function setStamina()
+LocalPlayer.CharacterAdded:Connect(function(char)
+    repeat task.wait() until char:FindFirstChildOfClass("Humanoid")
+    char:FindFirstChildOfClass("Humanoid").WalkSpeed = walkSpeed
+end)
+
+--// Infinite Stamina Toggle
+local staminaLocked = false
+MainTab:AddToggle("Infinite Stamina", {default = false}, function(state)
+    staminaLocked = state
+    local function maintainStamina()
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
             if v:IsA("NumberValue") and v.Name:lower():find("stamina") then
                 v.Value = 100
                 v:GetPropertyChangedSignal("Value"):Connect(function()
-                    v.Value = 100
+                    if staminaLocked then v.Value = 100 end
                 end)
             end
         end
     end
-    setStamina()
+    maintainStamina()
     LocalPlayer.CharacterAdded:Connect(function()
-        wait(1)
-        setStamina()
+        task.wait(1)
+        maintainStamina()
     end)
 end)
 
-MainTab:AddButton("Fly (Hold F)", function()
-    local flying = false
-    UIS.InputBegan:Connect(function(input)
-        if input.KeyCode == Enum.KeyCode.F then
-            flying = true
-            while flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("UpperTorso") do
-                LocalPlayer.Character.Humanoid.Sit = true
-                LocalPlayer.Character.UpperTorso.Velocity = Camera.CFrame.LookVector * 60 + Vector3.new(0, 10, 0)
-                task.wait()
-            end
-        end
-    end)
-    UIS.InputEnded:Connect(function(input)
-        if input.KeyCode == Enum.KeyCode.F then
-            flying = false
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                LocalPlayer.Character.Humanoid.Sit = false
-            end
-        end
-    end)
-end)
-
+--// Show Usernames Button
 MainTab:AddButton("Show Usernames", function()
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChild("UsernameTag") then
@@ -84,16 +73,69 @@ MainTab:AddButton("Show Usernames", function()
     end
 end)
 
--- // Aimbot Tab Functions
-local TriggerBot = false
+--// Aimbot Logic
 local AimbotEnabled = false
+local TriggerBotEnabled = false
+local AimbotFOV = 100
+local AimbotTargetPart = "Head"
 
+local function getClosest()
+    local closest, shortest = nil, AimbotFOV
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(AimbotTargetPart) then
+            local part = player.Character[AimbotTargetPart]
+            local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            if onScreen then
+                local dist = (Vector2.new(screenPos.X, screenPos.Y) - UIS:GetMouseLocation()).Magnitude
+                if dist < shortest then
+                    shortest = dist
+                    closest = part
+                end
+            end
+        end
+    end
+    return closest
+end
+
+RunService.RenderStepped:Connect(function()
+    if AimbotEnabled then
+        local target = getClosest()
+        if target then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
+        end
+    end
+    if TriggerBotEnabled then
+        local target = getClosest()
+        if target then
+            local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+            if tool and tool:FindFirstChild("Activate") then
+                tool:Activate()
+            end
+        end
+    end
+end)
+
+--// Aimbot Controls
 AimbotTab:AddToggle("Enable Aimbot", {default = false}, function(state)
     AimbotEnabled = state
 end)
 
-AimbotTab:AddToggle("Trigger Bot", {default = false}, function(state)
-    TriggerBot = state
+AimbotTab:AddToggle("Enable Trigger Bot", {default = false}, function(state)
+    TriggerBotEnabled = state
+end)
+
+AimbotTab:AddSlider("Aimbot FOV", {
+    min = 50;
+    max = 300;
+    default = 100;
+    text = "FOV Range";
+    callback = function(val)
+        AimbotFOV = val
+    end;
+})
+
+AimbotTab:AddDropdown("Target Part", {"Head", "Torso", "UpperTorso"}, function(part)
+    AimbotTargetPart = part
 end)
 
 AimbotTab:AddButton("Highlight Players", function()
@@ -108,8 +150,19 @@ AimbotTab:AddButton("Highlight Players", function()
     end
 end)
 
--- // Dupe Tab Placeholder
-DupeTab:AddLabel("Dupe system coming soon...")
+--// Dupe System
+DupeTab:AddButton("Dupe Backpack Items", function()
+    local bp = LocalPlayer:FindFirstChild("Backpack")
+    if bp then
+        for _, item in ipairs(bp:GetChildren()) do
+            local clone = item:Clone()
+            clone.Parent = bp
+        end
+        Library:Notify("Items duplicated!", 3)
+    else
+        Library:Notify("Backpack missing", 3)
+    end
+end)
 
--- // UI Ready
-Library:Notify("Loaded fakemrleo SLR UI", 3)
+--// Final Notification
+Library:Notify("Loaded script UI with full utilities ⚙️", 3)
